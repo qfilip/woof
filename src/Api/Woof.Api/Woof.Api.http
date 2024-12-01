@@ -1,0 +1,18 @@
+@Woof.api = http://localhost:5198
+
+Post {{Woof.api}}/add_sequential
+Content-Type: application/json
+
+{
+  "workflowId": "8dd13ff4-739c-4436-939b-87a8f7235968",
+  "parentStepId": "00000000-0000-0000-0000-000000000000",
+  "step": {
+    "name": "oops",
+    "unit": {
+      "functionPath": "Exec.Sum.exe",
+      "args": "1 2 3"
+    }
+  }
+}
+
+###
