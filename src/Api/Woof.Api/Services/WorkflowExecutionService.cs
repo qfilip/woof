@@ -4,6 +4,7 @@ using Woof.Api.DataAccess;
 using Woof.Api.DataAccess.Entities;
 using Woof.Api.DataAccess.Models.Definition;
 using Woof.Api.DataAccess.Models.Instance;
+using Woof.Api.Enums;
 
 namespace Woof.Api.Services;
 
@@ -26,28 +27,78 @@ public class WorkflowExecutionService
         _definitionDbContext = definitionDbContext;
     }
 
-    public async Task ExecuteStep(WorkflowRun wfr)
+    public async Task ExecuteNextStep(WorkflowRun wfr)
     {
-        //var wf = _definitionDbContext.
+        if (wfr.RunStatus == eRunStatus.Done) return;
+
+        var workflowError = FindRunStep(wfr, x => x.StdErr?.Length > 0);
+        if (workflowError != null)
+        {
+            _runDbContext.Update(wfr);
+            return;
+        }
+
+        var currentRunStep = FindRunStep(wfr, x => !x.Completed);
+        if (currentRunStep == null)
+        {
+            wfr.RunStatus = eRunStatus.Done;
+            _runDbContext.Update(wfr);
+            return;
+        }
+
+        var wf = _definitionDbContext.Find(x => x.Id == wfr.WorkflowId);
+        if (wf == null)
+            throw new InvalidOperationException($"Workflow {wfr.WorkflowId} not found.");
+
+        if (currentRunStep is InitialRunStep irStep)
+        {
+            irStep.Completed = true;
+        }
+        else if (currentRunStep is SequentialRunStep seqStep)
+        {
+            var step = FindStep(wf, x => x.Id == currentRunStep.Id);
+        }
+        else if (currentStep is LoopStep loopStep)
+        {
+            for (var i = 0; i < loopStep.LoopCount; i++)
+            {
+                var error = await RunUnitAsync(pathOrError, loopStep.Unit!.Args);
+            }
+        }
+
+        _runDbContext.Update(wfr);
+
+        throw new NotImplementedException();
     }
 
-    public async Task<IResult> CreateWorkflowRun(Guid workflowId)
+    public async Task<Opcode> StartWorkflowAsync(Guid workflowId)
     {
         var wf = _definitionDbContext.Find(x => x.Id == workflowId);
         if (wf == null) return Opcode.NotFound("Workflow not found.");
 
+        var wfr = CreateWorkflowRun(wf);
+        _runDbContext.Insert(wfr);
+
+        await _writer.WriteAsync(wfr);
+
+        return Opcode.Ok(wfr);
+    }
+
+    private WorkflowRun CreateWorkflowRun(Workflow wf)
+    {
         var wfr = new WorkflowRun
         {
             Id = Guid.NewGuid(),
-            WorkflowId = workflowId,
+            WorkflowId = wf.Id,
             InitialStep = new()
             {
                 Id = wf.InitialStep!.Id
             }
         };
+
         var currentStep = wf.InitialStep.Next;
         var currentRunStep = wfr.InitialStep.Next;
-        
+
         while (currentStep != null)
         {
             currentRunStep = currentStep switch
@@ -62,40 +113,35 @@ public class WorkflowExecutionService
 
         _runDbContext.Insert(wfr);
 
-
+        return wfr;
     }
-
-    public async Task<IResult> Start(Guid workflowId)
+    private WorkflowStep? FindStep(Workflow wf, Func<WorkflowStep, bool> predicate)
     {
-        var wf = _repository.Data.FirstOrDefault(x => x.Id == workflowId);
-        if (wf == null) return Opcode.NotFound();
-
-        var currentStep = wf.InitialStep!.Next;
-        
-        while(currentStep != null)
+        WorkflowStep? currentStep = wf.InitialStep;
+        while (currentStep != null)
         {
-            var (ok, pathOrError) = _ess.TryFindExecutable(currentStep);
-            if (!ok)
-            {
-                // log error
-                break;
-            }
-
-            if (currentStep is SequentialStep seqStep)
-            {
-                var error = await RunUnitAsync(pathOrError, seqStep.Unit!.Args);
-            }
-            else if (currentStep is LoopStep loopStep)
-            {
-                for (var i = 0; i < loopStep.LoopCount; i++)
-                {
-                    var error = await RunUnitAsync(pathOrError, loopStep.Unit!.Args);
-                }
-            }
+            if (predicate(currentStep))
+                return currentStep;
+            else
+                currentStep = currentStep.Next;
         }
-    }
 
-    public async Task<string> RunUnitAsync(string executablePath, string? arguments)
+        return null;
+    }
+    private WorkflowRunStep? FindRunStep(WorkflowRun wfr, Func<WorkflowRunStep, bool> predicate)
+    {
+        WorkflowRunStep? currentStep = wfr.InitialStep;
+        while (currentStep != null)
+        {
+            if (predicate(currentStep))
+                return currentStep;
+            else
+                currentStep = currentStep.Next;
+        }
+
+        return null;
+    }
+    private async Task<string> RunUnitAsync(string executablePath, string? arguments)
     {
         var info = new ProcessStartInfo()
         {
@@ -110,4 +156,5 @@ public class WorkflowExecutionService
 
         return await proc.StandardError.ReadToEndAsync();
     }
+
 }
