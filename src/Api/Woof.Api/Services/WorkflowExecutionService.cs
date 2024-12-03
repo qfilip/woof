@@ -31,14 +31,14 @@ public class WorkflowExecutionService
     {
         if (wfr.RunStatus == eRunStatus.Done) return;
 
-        var workflowError = FindRunStep(wfr, x => x.StdErr?.Length > 0);
+        var workflowError = FindRunStep(wfr, x => x.State.StdErr?.Length > 0);
         if (workflowError != null)
         {
             _runDbContext.Update(wfr);
             return;
         }
 
-        var currentRunStep = FindRunStep(wfr, x => !x.Completed);
+        var currentRunStep = FindRunStep(wfr, x => !x.State.Completed);
         if (currentRunStep == null)
         {
             wfr.RunStatus = eRunStatus.Done;
@@ -46,29 +46,48 @@ public class WorkflowExecutionService
             return;
         }
 
-        var wf = _definitionDbContext.Find(x => x.Id == wfr.WorkflowId);
-        if (wf == null)
-            throw new InvalidOperationException($"Workflow {wfr.WorkflowId} not found.");
-
-        if (currentRunStep is InitialRunStep irStep)
+        var (found, pathOrError) = _ess.TryFindExecutable(currentRunStep.State.Step);
+        if(!found)
         {
-            irStep.Completed = true;
+            currentRunStep.State.Completed = true;
+            currentRunStep.State.Status = pathOrError;
+            _runDbContext.Update(wfr);
+            return;
         }
-        else if (currentRunStep is SequentialRunStep seqStep)
-        {
-            var step = FindStep(wf, x => x.Id == currentRunStep.Id);
-        }
-        else if (currentStep is LoopStep loopStep)
-        {
-            for (var i = 0; i < loopStep.LoopCount; i++)
-            {
-                var error = await RunUnitAsync(pathOrError, loopStep.Unit!.Args);
-            }
-        }
+        //if (currentRunStep is InitialRunStep irStep)
+        //{
+        //    irStep.Step.Completed = true;
+        //}
+        //else if (currentRunStep is SequentialRunStep seqStep)
+        //{
+        //    var step = FindStep(wf, x => x.Id == currentRunStep.Step.Id);
+        //}
+        //else if (currentStep is LoopStep loopStep)
+        //{
+        //    for (var i = 0; i < loopStep.LoopCount; i++)
+        //    {
+        //        var error = await RunUnitAsync(pathOrError, loopStep.Unit!.Args);
+        //    }
+        //}
 
         _runDbContext.Update(wfr);
 
         throw new NotImplementedException();
+    }
+
+    private void RunStep(InitialRunStep step)
+    {
+
+    }
+
+    private void RunStep(SequentialRunStep step)
+    {
+
+    }
+
+    private void RunStep(LoopStep step)
+    {
+
     }
 
     public async Task<Opcode> StartWorkflowAsync(Guid workflowId)
@@ -90,21 +109,19 @@ public class WorkflowExecutionService
         {
             Id = Guid.NewGuid(),
             WorkflowId = wf.Id,
-            InitialStep = new()
-            {
-                Id = wf.InitialStep!.Id
-            }
+            InitialStep = new(wf.InitialStep!)
         };
 
-        var currentStep = wf.InitialStep.Next;
+        var currentStep = wf.InitialStep!.Next;
         var currentRunStep = wfr.InitialStep.Next;
 
         while (currentStep != null)
         {
             currentRunStep = currentStep switch
             {
-                SequentialStep seq => new SequentialRunStep { Id = seq.Id },
-                LoopStep seq => new LoopRunStep { Id = seq.Id, CurrentLoopCount = 0 },
+                SequentialStep seq => new SequentialRunStep(seq),
+                LoopStep loop => new LoopRunStep(loop),
+                _ => throw new UnreachableException("Step type not supported")
             };
 
             currentStep = currentStep.Next;

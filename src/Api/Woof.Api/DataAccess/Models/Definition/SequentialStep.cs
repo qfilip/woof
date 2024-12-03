@@ -2,5 +2,4 @@
 
 public class SequentialStep : WorkflowStep
 {
-    public WorkflowUnit? Unit { get; set; }
 }
