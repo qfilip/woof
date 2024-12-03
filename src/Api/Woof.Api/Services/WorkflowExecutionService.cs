@@ -80,7 +80,6 @@ public class WorkflowExecutionService
         };
 
         var stdErr = await runTask;
-        currentRunStep.State.Completed = true;
         _runDbContext.Update(wfr);
 
         var noError = stdErr?.Length == 0;
@@ -89,10 +88,15 @@ public class WorkflowExecutionService
             await _writer.WriteAsync(wfr);
     }
 
-    private Task<string> RunStepAsync(InitialRunStep step) => Task.FromResult(string.Empty);
+    private Task<string> RunStepAsync(InitialRunStep step)
+    {
+        step.State.Completed = true;
+        return Task.FromResult(string.Empty);
+    }
 
     private Task<string> RunStepAsync(SequentialRunStep step, string executablePath)
     {
+        step.State.Completed = true;
         return RunUnitAsync(executablePath, step.State.Step.Unit.Args);
     }
 
