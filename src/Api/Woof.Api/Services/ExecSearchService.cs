@@ -22,9 +22,7 @@ public class ExecSearchService
         if (initialStep)
             return (true, string.Empty);
 
-        var executableName = step.Unit.ExecutableName;
-
-        var files = Directory.GetFiles(_execsRootPath, executableName, SearchOption.AllDirectories);
+        var files = Directory.GetFiles(_execsRootPath, step.ExecutableName, SearchOption.AllDirectories);
 
         return files.Length switch
         {

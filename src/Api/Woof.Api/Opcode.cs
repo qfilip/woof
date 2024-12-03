@@ -2,33 +2,35 @@
 
 namespace Woof.Api;
 
-public class Opcode
+public class Opcode<T>
 {
-    private Opcode(object? data, int code)
+    private Opcode(T? data, int code, IEnumerable<string> errors)
     {
         Data = data;
         Code = code;
+        Errors = errors;
     }
 
     public int Code { get; }
-    public object? Data { get; }
+    public T? Data { get; }
+    public IEnumerable<string> Errors { get; set; }
 
-    public static Opcode Ok(object? data = null) => new Opcode(data, 200);
-    public static Opcode NotFound() => new Opcode(null, 404);
-    public static Opcode NotFound(string message) => new Opcode(message, 404);
-    public static Opcode Rejected(string reason) => new Opcode(reason, 400);
-    public static Opcode Rejected(IEnumerable<string> reasons) => new Opcode(reasons, 400);
+    public static Opcode<T> Ok(T? data) => new Opcode<T>(data, 200, []);
+    public static Opcode<T> NotFound() => new Opcode<T>(default, 404, []);
+    public static Opcode<T> NotFound(string message) => new Opcode<T>(default, 404, [message]);
+    public static Opcode<T> Rejected(string reason) => new Opcode<T>(default, 400, [reason]);
+    public static Opcode<T> Rejected(IEnumerable<string> reasons) => new Opcode<T>(default, 400, reasons);
 }
 
 public static class OpcodeExtensions
 {
-    public static IResult ToResult(this Opcode opcode)
+    public static IResult ToResult<T>(this Opcode<T> opcode)
     {
         return opcode.Code switch
         {
             200 => Results.Ok(opcode.Data),
-            400 => Results.Conflict(opcode.Data),
-            404 => Results.NotFound(opcode.Data),
+            400 => Results.Conflict(opcode.Errors),
+            404 => Results.NotFound(opcode.Errors),
             _ => throw new UnreachableException($"Opcode {opcode.Code} not supported")
         };
     }

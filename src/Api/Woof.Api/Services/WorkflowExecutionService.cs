@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Reflection.Emit;
 using System.Threading.Channels;
 using Woof.Api.DataAccess;
 using Woof.Api.DataAccess.Entities;
@@ -27,16 +28,18 @@ public class WorkflowExecutionService
         _definitionDbContext = definitionDbContext;
     }
 
-    public async Task<Opcode> StartWorkflowAsync(Guid workflowId)
+    public async Task<Opcode<WorkflowRun>> StartWorkflowAsync(Guid workflowId)
     {
         var wf = _definitionDbContext.Find(x => x.Id == workflowId);
-        if (wf == null) return Opcode.NotFound("Workflow not found.");
+        if (wf == null) return Opcode<WorkflowRun>.NotFound("Workflow not found.");
 
-        var wfr = CreateWorkflowRun(wf);
+        var opcode = CreateWorkflowRun(wf);
 
-        await _writer.WriteAsync(wfr);
+        if (!opcode.Errors.Any()) return opcode;
 
-        return Opcode.Ok(wfr);
+        await _writer.WriteAsync(opcode.Data!);
+
+        return opcode;
     }
 
     public async Task ExecuteNextStep(WorkflowRun wfr)
@@ -97,28 +100,53 @@ public class WorkflowExecutionService
     private Task<string> RunStepAsync(SequentialRunStep step, string executablePath)
     {
         step.State.Completed = true;
-        return RunUnitAsync(executablePath, step.State.Step.Unit.Args);
+        return RunUnitAsync(step.ExecutablePath, step.Arguments);
     }
 
     private async Task<string> RunStepAsync(LoopRunStep step, string executablePath)
     {
-        var stdErr = await RunUnitAsync(executablePath, step.State.Step.Unit.Args);
+        var stdErr = await RunUnitAsync(step.ExecutablePath, step.Arguments);
         step.CurrentLoopCount++;
 
         return stdErr;
     }
 
-    private WorkflowRun CreateWorkflowRun(Workflow wf)
+    private Opcode<WorkflowRun> CreateWorkflowRun(Workflow wf)
     {
+        var errors = new List<string>();
+        
         WorkflowRunStep? MapSubsteps(WorkflowStep? step)
         {
             if (step == null) return null;
 
+            var (ok, pathOrError) = _ess.TryFindExecutable(step);
+            if (!ok)
+                errors.Add($"Executable {step.ExecutableName} not found.");
+
             WorkflowRunStep runStep = step switch
             {
-                InitialStep init => new InitialRunStep(init),
-                SequentialStep seq => new SequentialRunStep(seq),
-                LoopStep loop => new LoopRunStep(loop),
+                InitialStep init => new InitialRunStep
+                {
+                    Id = init.Id,
+                    Name = init.Name,
+                    Arguments = init.Arguments,
+                    ExecutablePath = pathOrError
+                },
+                SequentialStep seq => new SequentialRunStep()
+                {
+                    Id = seq.Id,
+                    Name = seq.Name,
+                    Arguments = seq.Arguments,
+                    ExecutablePath = pathOrError
+                },
+                LoopStep loop => new LoopRunStep()
+                {
+                    Id = loop.Id,
+                    Name = loop.Name,
+                    Arguments = loop.Arguments,
+                    ExecutablePath = pathOrError,
+                    LoopCount = loop.LoopCount
+                },
                 _ => throw new UnreachableException("Step type not supported")
             };
 
@@ -129,6 +157,11 @@ public class WorkflowExecutionService
 
         var initRunStep = MapSubsteps(wf.InitialStep);
         
+        if(errors.Any())
+        {
+            return Opcode<WorkflowRun>.Rejected(errors);
+        }
+
         var wfr = new WorkflowRun
         {
             Id = Guid.NewGuid(),
@@ -138,7 +171,7 @@ public class WorkflowExecutionService
 
         _runDbContext.Insert(wfr);
 
-        return wfr;
+        return Opcode<WorkflowRun>.Ok(wfr);
     }
     private WorkflowStep? FindStep(Workflow wf, Func<WorkflowStep, bool> predicate)
     {

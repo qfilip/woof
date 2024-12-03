@@ -2,12 +2,9 @@
 
 public class WorkflowStep
 {
-    public WorkflowStep(WorkflowUnit unit)
-    {
-        Unit = unit;
-    }
     public Guid Id { get; set; }
     public string? Name { get; set; }
-    public WorkflowUnit Unit { get; set; }
+    public required string ExecutableName { get; set; }
+    public string? Arguments { get; set; }
     public WorkflowStep? Next { get; set; }
 }

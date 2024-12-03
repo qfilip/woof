@@ -17,40 +17,46 @@ public class WorkflowBuilderService
 
     public Workflow Create(string name)
     {
-        var wf = new Workflow(Guid.NewGuid(), name, new(new(string.Empty, null)));
+        var wf = new Workflow
+        {
+            Id = Guid.NewGuid(),
+            Name = name,
+            InitialStep = new()
+            { ExecutableName = string.Empty },
+        };
         
         _dbContext.Insert(wf);
 
         return wf;
     }
 
-    public Opcode AddNextStep<T>(Guid workflowId, Guid targetStepId, WorkflowStep nextStep) where T : WorkflowStep
+    public Opcode<Workflow> AddNextStep<T>(Guid workflowId, Guid targetStepId, WorkflowStep nextStep) where T : WorkflowStep
     {
         var wf = _dbContext.Find(x => x.Id == workflowId);
-        if (wf == null) return Opcode.NotFound("Workflow not found.");
+        if (wf == null) return Opcode<Workflow>.NotFound("Workflow not found.");
 
         var (hasExecutable, _) = _ess.TryFindExecutable(nextStep);
         if(!hasExecutable)
-            return Opcode.NotFound("Executable not found.");
+            return Opcode<Workflow>.NotFound("Executable not found.");
 
         nextStep.Id = Guid.NewGuid();
         var stepAdded = AddNextStep(wf.InitialStep, targetStepId, nextStep);
         _dbContext.Update(wf);
 
-        return stepAdded ? Opcode.Ok(wf) : Opcode.NotFound("Parent step not found.");
+        return stepAdded ? Opcode<Workflow>.Ok(wf) : Opcode<Workflow>.NotFound("Parent step not found.");
     }
 
-    public Opcode RemoveStep(Guid workflowId, Guid stepId)
+    public Opcode<Workflow> RemoveStep(Guid workflowId, Guid stepId)
     {
         var wf = _dbContext.Find(x => x.Id == workflowId);
-        if (wf == null) return Opcode.NotFound("Workflow not found.");
+        if (wf == null) return Opcode<Workflow>.NotFound("Workflow not found.");
 
-        if(wf.InitialStep ==  null) return Opcode.NotFound();
+        if(wf.InitialStep ==  null) return Opcode<Workflow>.NotFound();
 
         var stepRemoved = RemoveStep(wf.InitialStep, stepId);
         _dbContext.Update(wf);
 
-        return stepRemoved ? Opcode.Ok(wf) : Opcode.NotFound("Step not found.");
+        return stepRemoved ? Opcode<Workflow>.Ok(wf) : Opcode<Workflow>.NotFound("Step not found.");
     }
 
     private static bool AddNextStep<T>(WorkflowStep? step, Guid targetStepId, T nextStep) where T : WorkflowStep

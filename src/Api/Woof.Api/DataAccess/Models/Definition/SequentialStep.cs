@@ -2,7 +2,4 @@
 
 public class SequentialStep : WorkflowStep
 {
-    public SequentialStep(WorkflowUnit unit) : base(unit)
-    {
-    }
 }
