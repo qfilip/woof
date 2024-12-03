@@ -21,8 +21,6 @@ public class ChannelHostingService : BackgroundService
     {
         while (!_reader.Completion.IsCompleted)
         {
-            Console.WriteLine("Got message");
-
             var message = await _reader.ReadAsync();
             using var scope = _serviceProvider.CreateScope();
             var service = scope.ServiceProvider.GetRequiredService<WorkflowExecutionService>();

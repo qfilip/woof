@@ -43,14 +43,12 @@ public class WorkflowExecutionService
     {
         if (wfr.RunStatus == eRunStatus.Done)
         {
-            Console.WriteLine("Workflow run done");
             return;
         }
 
         var workflowError = FindRunStep(wfr, x => x.State.StdErr?.Length > 0);
         if (workflowError != null)
         {
-            Console.WriteLine("Workflow run done with error");
             _runDbContext.Update(wfr);
             return;
         }
@@ -58,7 +56,6 @@ public class WorkflowExecutionService
         var currentRunStep = FindRunStep(wfr, x => !x.State.Completed);
         if (currentRunStep == null)
         {
-            Console.WriteLine("Workflow run done");
             wfr.RunStatus = eRunStatus.Done;
             _runDbContext.Update(wfr);
             return;
@@ -74,8 +71,6 @@ public class WorkflowExecutionService
             return;
         }
 
-        Console.WriteLine($"Executing {currentRunStep.State.Step.Name}");
-
         var runTask = currentRunStep switch
         {
             InitialRunStep init => RunStepAsync(init),
@@ -88,7 +83,7 @@ public class WorkflowExecutionService
         currentRunStep.State.Completed = true;
         _runDbContext.Update(wfr);
 
-        var noError = stdErr != null && stdErr.Length > 0;
+        var noError = stdErr?.Length == 0;
         
         if (noError)
             await _writer.WriteAsync(wfr);
@@ -111,27 +106,31 @@ public class WorkflowExecutionService
 
     private WorkflowRun CreateWorkflowRun(Workflow wf)
     {
-        var wfr = new WorkflowRun
+        WorkflowRunStep? MapSubsteps(WorkflowStep? step)
         {
-            Id = Guid.NewGuid(),
-            WorkflowId = wf.Id,
-            InitialStep = new(wf.InitialStep!)
-        };
+            if (step == null) return null;
 
-        void AddNext(WorkflowStep? step, WorkflowRunStep? runStep)
-        {
-            if (step == null) return;
-            runStep = step switch
+            WorkflowRunStep runStep = step switch
             {
+                InitialStep init => new InitialRunStep(init),
                 SequentialStep seq => new SequentialRunStep(seq),
                 LoopStep loop => new LoopRunStep(loop),
                 _ => throw new UnreachableException("Step type not supported")
             };
 
-            AddNext(step.Next, runStep.Next);
+            runStep.Next = MapSubsteps(step.Next);
+
+            return runStep;
         }
 
-        AddNext(wf.InitialStep!.Next, wfr.InitialStep.Next);
+        var initRunStep = MapSubsteps(wf.InitialStep);
+        
+        var wfr = new WorkflowRun
+        {
+            Id = Guid.NewGuid(),
+            WorkflowId = wf.Id,
+            InitialStep = initRunStep as InitialRunStep
+        };
 
         _runDbContext.Insert(wfr);
 

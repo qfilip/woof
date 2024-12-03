@@ -17,15 +17,7 @@ public class WorkflowBuilderService
 
     public Workflow Create(string name)
     {
-        var wf = new Workflow
-        {
-            Id = Guid.NewGuid(),
-            Name = name,
-            InitialStep = new InitialStep(new(string.Empty, null))
-            {
-                Id = Guid.NewGuid()
-            },
-        };
+        var wf = new Workflow(Guid.NewGuid(), name, new(new(string.Empty, null)));
         
         _dbContext.Insert(wf);
 
