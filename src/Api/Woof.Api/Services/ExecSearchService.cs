@@ -13,6 +13,15 @@ public class ExecSearchService
 
     public (bool, string) TryFindExecutable<T>(T step) where T : WorkflowStep
     {
+        var initialStep = step switch
+        {
+            InitialStep => true,
+            _ => false
+        };
+
+        if (initialStep)
+            return (true, string.Empty);
+
         var executableName = step.Unit.ExecutableName;
 
         var files = Directory.GetFiles(_execsRootPath, executableName, SearchOption.AllDirectories);

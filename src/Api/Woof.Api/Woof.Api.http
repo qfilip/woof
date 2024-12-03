@@ -1,18 +1,25 @@
 @Woof.api = http://localhost:5198
 
-Post {{Woof.api}}/add_sequential
+Post {{Woof.api}}/definitions/add_sequential
 Content-Type: application/json
 
 {
-  "workflowId": "8dd13ff4-739c-4436-939b-87a8f7235968",
-  "parentStepId": "00000000-0000-0000-0000-000000000000",
+  "workflowId": "88560961-a703-4ae7-ad3e-b8e3125f3b4d",
+  "parentStepId": "0abd9acf-36e4-4ed4-a8c4-a4040ab45705",
   "step": {
-    "name": "oops",
+    "name": "mult",
     "unit": {
-      "functionPath": "Exec.Sum.exe",
-      "args": "1 2 3"
+      "executableName": "Exec.Multiply.exe",
+      "args": "1 2"
     }
   }
 }
 
 ###
+
+Post {{Woof.api}}/runs
+Content-Type: application/json
+
+{
+  "workflowId": "88560961-a703-4ae7-ad3e-b8e3125f3b4d"
+}

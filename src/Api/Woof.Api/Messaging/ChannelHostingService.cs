@@ -1,5 +1,4 @@
-﻿
-using System.Threading.Channels;
+﻿using System.Threading.Channels;
 using Woof.Api.DataAccess.Entities;
 using Woof.Api.Services;
 
@@ -22,11 +21,20 @@ public class ChannelHostingService : BackgroundService
     {
         while (!_reader.Completion.IsCompleted)
         {
+            Console.WriteLine("Got message");
+
             var message = await _reader.ReadAsync();
             using var scope = _serviceProvider.CreateScope();
             var service = scope.ServiceProvider.GetRequiredService<WorkflowExecutionService>();
 
-            // exec step
+            try
+            {
+                await service.ExecuteNextStep(message);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Channel exception {ex.Message}");
+            }
         }
     }
 }

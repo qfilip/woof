@@ -33,7 +33,6 @@ public class WorkflowExecutionService
         if (wf == null) return Opcode.NotFound("Workflow not found.");
 
         var wfr = CreateWorkflowRun(wf);
-        _runDbContext.Insert(wfr);
 
         await _writer.WriteAsync(wfr);
 
@@ -42,11 +41,16 @@ public class WorkflowExecutionService
 
     public async Task ExecuteNextStep(WorkflowRun wfr)
     {
-        if (wfr.RunStatus == eRunStatus.Done) return;
+        if (wfr.RunStatus == eRunStatus.Done)
+        {
+            Console.WriteLine("Workflow run done");
+            return;
+        }
 
         var workflowError = FindRunStep(wfr, x => x.State.StdErr?.Length > 0);
         if (workflowError != null)
         {
+            Console.WriteLine("Workflow run done with error");
             _runDbContext.Update(wfr);
             return;
         }
@@ -54,12 +58,14 @@ public class WorkflowExecutionService
         var currentRunStep = FindRunStep(wfr, x => !x.State.Completed);
         if (currentRunStep == null)
         {
+            Console.WriteLine("Workflow run done");
             wfr.RunStatus = eRunStatus.Done;
             _runDbContext.Update(wfr);
             return;
         }
 
         var (found, pathOrError) = _ess.TryFindExecutable(currentRunStep.State.Step);
+        
         if(!found)
         {
             currentRunStep.State.Completed = true;
@@ -67,6 +73,8 @@ public class WorkflowExecutionService
             _runDbContext.Update(wfr);
             return;
         }
+
+        Console.WriteLine($"Executing {currentRunStep.State.Step.Name}");
 
         var runTask = currentRunStep switch
         {
@@ -110,21 +118,20 @@ public class WorkflowExecutionService
             InitialStep = new(wf.InitialStep!)
         };
 
-        var currentStep = wf.InitialStep!.Next;
-        var currentRunStep = wfr.InitialStep.Next;
-
-        while (currentStep != null)
+        void AddNext(WorkflowStep? step, WorkflowRunStep? runStep)
         {
-            currentRunStep = currentStep switch
+            if (step == null) return;
+            runStep = step switch
             {
                 SequentialStep seq => new SequentialRunStep(seq),
                 LoopStep loop => new LoopRunStep(loop),
                 _ => throw new UnreachableException("Step type not supported")
             };
 
-            currentStep = currentStep.Next;
-            currentRunStep = currentRunStep.Next;
+            AddNext(step.Next, runStep.Next);
         }
+
+        AddNext(wf.InitialStep!.Next, wfr.InitialStep.Next);
 
         _runDbContext.Insert(wfr);
 

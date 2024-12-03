@@ -23,8 +23,7 @@ public class WorkflowBuilderService
             Name = name,
             InitialStep = new InitialStep(new(string.Empty, null))
             {
-                Id = Guid.NewGuid(),
-                Name = "init"
+                Id = Guid.NewGuid()
             },
         };
         

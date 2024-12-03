@@ -3,6 +3,7 @@ using Woof.Api.DataAccess.Entities;
 using Woof.Api.DataAccess.Extensions;
 using Woof.Api.DataAccess;
 using Woof.Api.Services;
+using Woof.Api.Messaging;
 
 namespace Woof.Api;
 
@@ -17,6 +18,7 @@ public static class ServiceRegistry
         builder.Services.AddSingleton(_ => Channel.CreateUnbounded<WorkflowRun>());
         builder.Services.AddSingleton(sp => sp.GetRequiredService<Channel<WorkflowRun>>().Writer);
         builder.Services.AddSingleton(sp => sp.GetRequiredService<Channel<WorkflowRun>>().Reader);
+        builder.Services.AddHostedService<ChannelHostingService>();
 
         // database
         builder.Services.AddSingleton(_ => new LiteDbConfig(builder.Environment));
@@ -35,6 +37,7 @@ public static class ServiceRegistry
 
         // services
         builder.Services.AddScoped<WorkflowBuilderService>();
+        builder.Services.AddScoped<WorkflowExecutionService>();
         builder.Services.AddSingleton(_ => new ExecSearchService(Path.Combine(builder.Environment.WebRootPath, "functions")));
     }
 }
