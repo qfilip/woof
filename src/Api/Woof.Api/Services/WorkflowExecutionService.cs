@@ -63,13 +63,11 @@ public class WorkflowExecutionService
             _runDbContext.Update(wfr);
             return;
         }
-
-        var (found, pathOrError) = _ess.TryFindExecutable(currentRunStep.State.Step);
         
-        if(!found)
+        if(!File.Exists(currentRunStep.ExecutablePath))
         {
             currentRunStep.State.Completed = true;
-            currentRunStep.State.Status = pathOrError;
+            currentRunStep.State.Status = "Executable file not found";
             _runDbContext.Update(wfr);
             return;
         }
@@ -77,8 +75,8 @@ public class WorkflowExecutionService
         var runTask = currentRunStep switch
         {
             InitialRunStep init => RunStepAsync(init),
-            SequentialRunStep seq => RunStepAsync(seq, pathOrError),
-            LoopRunStep loop => RunStepAsync(loop, pathOrError),
+            SequentialRunStep seq => RunStepAsync(seq),
+            LoopRunStep loop => RunStepAsync(loop),
             _ => throw new UnreachableException("Unsupported step type.")
         };
 
@@ -97,14 +95,19 @@ public class WorkflowExecutionService
         return Task.FromResult(string.Empty);
     }
 
-    private Task<string> RunStepAsync(SequentialRunStep step, string executablePath)
+    private Task<string> RunStepAsync(SequentialRunStep step)
     {
         step.State.Completed = true;
         return RunUnitAsync(step.ExecutablePath, step.Arguments);
     }
 
-    private async Task<string> RunStepAsync(LoopRunStep step, string executablePath)
+    private async Task<string> RunStepAsync(LoopRunStep step)
     {
+        if (step.CurrentLoopCount == step.LoopCount)
+        {
+            step.State.Completed = true;
+            return string.Empty;
+        }
         var stdErr = await RunUnitAsync(step.ExecutablePath, step.Arguments);
         step.CurrentLoopCount++;
 
