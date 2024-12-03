@@ -2,15 +2,15 @@
 
 public class WorkflowUnit
 {
-    private readonly string _functionPath;
+    private readonly string _executableName;
     private readonly string? _args;
 
-    public WorkflowUnit(string functionPath, string? args)
+    public WorkflowUnit(string executableName, string? args)
     {
-        _functionPath = functionPath;
+        _executableName = executableName;
         _args = args;
     }
 
-    public string FunctionPath { get => _functionPath; }
+    public string ExecutableName { get => _executableName; }
     public string? Args { get => _args; }
 }

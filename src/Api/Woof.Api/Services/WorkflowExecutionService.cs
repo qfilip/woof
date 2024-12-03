@@ -27,6 +27,19 @@ public class WorkflowExecutionService
         _definitionDbContext = definitionDbContext;
     }
 
+    public async Task<Opcode> StartWorkflowAsync(Guid workflowId)
+    {
+        var wf = _definitionDbContext.Find(x => x.Id == workflowId);
+        if (wf == null) return Opcode.NotFound("Workflow not found.");
+
+        var wfr = CreateWorkflowRun(wf);
+        _runDbContext.Insert(wfr);
+
+        await _writer.WriteAsync(wfr);
+
+        return Opcode.Ok(wfr);
+    }
+
     public async Task ExecuteNextStep(WorkflowRun wfr)
     {
         if (wfr.RunStatus == eRunStatus.Done) return;
@@ -54,53 +67,38 @@ public class WorkflowExecutionService
             _runDbContext.Update(wfr);
             return;
         }
-        //if (currentRunStep is InitialRunStep irStep)
-        //{
-        //    irStep.Step.Completed = true;
-        //}
-        //else if (currentRunStep is SequentialRunStep seqStep)
-        //{
-        //    var step = FindStep(wf, x => x.Id == currentRunStep.Step.Id);
-        //}
-        //else if (currentStep is LoopStep loopStep)
-        //{
-        //    for (var i = 0; i < loopStep.LoopCount; i++)
-        //    {
-        //        var error = await RunUnitAsync(pathOrError, loopStep.Unit!.Args);
-        //    }
-        //}
 
+        var runTask = currentRunStep switch
+        {
+            InitialRunStep init => RunStepAsync(init),
+            SequentialRunStep seq => RunStepAsync(seq, pathOrError),
+            LoopRunStep loop => RunStepAsync(loop, pathOrError),
+            _ => throw new UnreachableException("Unsupported step type.")
+        };
+
+        var stdErr = await runTask;
+        currentRunStep.State.Completed = true;
         _runDbContext.Update(wfr);
 
-        throw new NotImplementedException();
+        var noError = stdErr != null && stdErr.Length > 0;
+        
+        if (noError)
+            await _writer.WriteAsync(wfr);
     }
 
-    private void RunStep(InitialRunStep step)
-    {
+    private Task<string> RunStepAsync(InitialRunStep step) => Task.FromResult(string.Empty);
 
+    private Task<string> RunStepAsync(SequentialRunStep step, string executablePath)
+    {
+        return RunUnitAsync(executablePath, step.State.Step.Unit.Args);
     }
 
-    private void RunStep(SequentialRunStep step)
+    private async Task<string> RunStepAsync(LoopRunStep step, string executablePath)
     {
+        var stdErr = await RunUnitAsync(executablePath, step.State.Step.Unit.Args);
+        step.CurrentLoopCount++;
 
-    }
-
-    private void RunStep(LoopStep step)
-    {
-
-    }
-
-    public async Task<Opcode> StartWorkflowAsync(Guid workflowId)
-    {
-        var wf = _definitionDbContext.Find(x => x.Id == workflowId);
-        if (wf == null) return Opcode.NotFound("Workflow not found.");
-
-        var wfr = CreateWorkflowRun(wf);
-        _runDbContext.Insert(wfr);
-
-        await _writer.WriteAsync(wfr);
-
-        return Opcode.Ok(wfr);
+        return stdErr;
     }
 
     private WorkflowRun CreateWorkflowRun(Workflow wf)

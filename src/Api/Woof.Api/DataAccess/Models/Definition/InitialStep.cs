@@ -2,4 +2,7 @@
 
 public class InitialStep : WorkflowStep
 {
+    public InitialStep(WorkflowUnit unit) : base(unit)
+    {
+    }
 }

@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using Woof.Api.DataAccess.Models.Definition;
+﻿using Woof.Api.DataAccess.Models.Definition;
 
 namespace Woof.Api.Services;
 
@@ -14,12 +13,7 @@ public class ExecSearchService
 
     public (bool, string) TryFindExecutable<T>(T step) where T : WorkflowStep
     {
-        var executableName = step switch
-        {
-            SequentialStep seqStep => seqStep.Unit!.FunctionPath,
-            LoopStep loopStep => loopStep.Unit!.FunctionPath,
-            _ => throw new UnreachableException("Workflow step type not supported")
-        };
+        var executableName = step.Unit.ExecutableName;
 
         var files = Directory.GetFiles(_execsRootPath, executableName, SearchOption.AllDirectories);
 

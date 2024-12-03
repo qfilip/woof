@@ -1,8 +1,8 @@
-﻿using Woof.Api.DataAccess.Entities;
-using Woof.Api.DataAccess;
+﻿using Woof.Api.DataAccess;
+using Woof.Api.DataAccess.Entities;
+using Woof.Api.DataAccess.Models.Definition;
 using Woof.Api.Dtos;
 using Woof.Api.Services;
-using Woof.Api.DataAccess.Models.Definition;
 
 namespace Woof.Api;
 
@@ -10,7 +10,8 @@ public static class EndpointMapper
 {
     public static void AddDefinitionEndpoints(this WebApplication app)
     {
-        var group = app.MapGroup("definition");
+        var group = app.MapGroup("definitions");
+        
         group.MapGet("", (LiteDbContext<Workflow> wfdb) => Results.Ok(wfdb.GetAll()));
 
         group.MapGet("find", (Guid workflowId, LiteDbContext<Workflow> wfdb) =>
@@ -28,6 +29,9 @@ public static class EndpointMapper
 
     public static void AddRunEndpoints(this WebApplication app)
     {
+        var group = app.MapGroup("runs");
 
+        group.MapPost("", async (RunWorkflowDto dto, WorkflowExecutionService wes) =>
+            wes.StartWorkflowAsync(dto.WorkflowId));
     }
 }

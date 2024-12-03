@@ -21,7 +21,7 @@ public class WorkflowBuilderService
         {
             Id = Guid.NewGuid(),
             Name = name,
-            InitialStep = new InitialStep
+            InitialStep = new InitialStep(new(string.Empty, null))
             {
                 Id = Guid.NewGuid(),
                 Name = "init"
