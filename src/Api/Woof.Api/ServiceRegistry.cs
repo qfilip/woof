@@ -4,6 +4,8 @@ using Woof.Api.DataAccess.Extensions;
 using Woof.Api.DataAccess;
 using Woof.Api.Services;
 using Woof.Api.Messaging;
+using Woof.Api.Services.Abstractions;
+using Woof.Api.Services.Runners;
 
 namespace Woof.Api;
 
@@ -39,5 +41,21 @@ public static class ServiceRegistry
         builder.Services.AddScoped<WorkflowBuilderService>();
         builder.Services.AddScoped<WorkflowExecutionService>();
         builder.Services.AddSingleton(_ => new ExecSearchService(Path.Combine(builder.Environment.WebRootPath, "functions")));
+
+        // runners
+        builder.Services.AddScoped<IRunner, Runner>();
+        var type = typeof(IStepRunner<>);
+        var assembly = type.Assembly;
+
+        var stepRunners = assembly
+          .GetTypes()
+          .Where(x =>
+             x.GetInterface(type.Name) != null &&
+             !x.IsAbstract &&
+             !x.IsInterface)
+          .ToList();
+
+        foreach (var sr in stepRunners)
+            builder.Services.AddTransient(sr);
     }
 }
