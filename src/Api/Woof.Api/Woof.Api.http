@@ -13,14 +13,12 @@ Post {{Woof.api}}/definitions/add_sequential
 Content-Type: application/json
 
 {
-  "workflowId": "2b2abd8a-bbd4-4155-9a71-c1a18b7eebd8",
+  "workflowId": "906e621c-ab00-48e4-a009-c56fc9d35bc8",
   "parentStepId": "00000000-0000-0000-0000-000000000000",
   "step": {
     "name": "mult",
-    "unit": {
-      "executableName": "Exec.Multiply.exe",
-      "args": "1 2"
-    }
+    "executableName": "Exec.Multiply.exe",
+    "arguments": "1 2"
   }
 }
 

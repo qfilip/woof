@@ -50,22 +50,22 @@ public class YamlFileStore<T> where T : YamlEntity
 
     public void Update(T entity)
     {
-        _commands.Add(xs =>
-        {
-            var element = xs.First(x => x.Id == entity.Id);
-            element = entity;
-        });
+        _commands.Add(xs => _commands.Add(xs => UpdateCommand(xs, entity)));
     }
 
     public Task UpdateAsync(T entity)
     {
-        _commands.Add(xs =>
-        {
-            var element = xs.First(x => x.Id == entity.Id);
-            element = entity;
-        });
-
+        _commands.Add(xs => UpdateCommand(xs, entity));
         return CompleteAsync();
+    }
+
+    private void UpdateCommand(List<T> xs, T target)
+    {
+        var i = xs.FindIndex(x => x.Id == target.Id);
+        if (i == -1)
+            throw new InvalidOperationException($"Entity {target.Id} not found");
+
+        xs[i] = target;
     }
 
     public async Task CompleteAsync()
