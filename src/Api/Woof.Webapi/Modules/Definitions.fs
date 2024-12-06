@@ -1,35 +1,57 @@
 ﻿module rec Definitions
 
 open System
+open Dtos
+open Woof.Webapi.DataAccess
 
-type StepInfo = {
-    Id: Guid
-    Name: string
-    ExecFile: string
+type ExecInfo = {
+    FileName: string
     Arguments: string
-    Next: WorkflowStep option
 }
 
-type InitStep = {
-    StepInfo: StepInfo
-}
-
-type LoopStep = {
-    StepInfo: StepInfo
+type LoopStepParameters = {
     LoopCount: int
 }
 
-type SequentialStep = {
-    StepInfo: StepInfo
+type Step<'a> = {
+    Id: Guid
+    Parameters: 'a
+    ExecInfo: ExecInfo
+    Next: WorkflowStep option
 }
 
-type WorkflowStep = 
-| InitStep of InitStep
-| LoopStep of LoopStep
-| SequentialStep of SequentialStep
+type InitStep = Step<unit>
+
+type WorkflowStep =
+| LoopStep of Step<LoopStepParameters>
+| SequentialStep of Step<unit>
 
 type Workflow = {
     Id: Guid
     Name: string
     Init: InitStep
 }
+
+let createWorkflow (dto: CreateWorkflowDto) (fs: YamlFileStore<Workflow>) = task {
+    let init: InitStep = {
+        Id = Guid.NewGuid()
+        ExecInfo = {
+            FileName = ""
+            Arguments = ""
+        }
+        Parameters = ()
+        Next = None
+    }
+
+    let wf: Workflow = {
+        Id = Guid.NewGuid()
+        Name = dto.Name
+        Init = init
+    }
+
+    fs.Do(fun xs -> wf::xs)
+    do! fs.Complete()
+
+    return wf
+}
+    
