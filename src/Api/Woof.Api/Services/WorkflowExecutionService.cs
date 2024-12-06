@@ -17,19 +17,22 @@ public class WorkflowExecutionService
     private readonly ChannelWriter<WorkflowRun> _writer;
     private readonly YamlFileStore<WorkflowRun> _runStore;
     private readonly YamlFileStore<Workflow> _defStore;
+    private readonly ILogger<WorkflowExecutionService> _logger;
 
     public WorkflowExecutionService(
         IRunner runner,
         ExecSearchService ess,
         ChannelWriter<WorkflowRun> writer,
         YamlFileStore<WorkflowRun> runStore,
-        YamlFileStore<Workflow> defStore)
+        YamlFileStore<Workflow> defStore,
+        ILogger<WorkflowExecutionService> logger)
     {
         _runner = runner;
         _ess = ess;
         _writer = writer;
         _runStore = runStore;
         _defStore = defStore;
+        _logger = logger;
     }
 
     public async Task<Opcode<WorkflowRun>> StartWorkflowAsync(Guid workflowId)

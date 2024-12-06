@@ -1,11 +1,20 @@
 @Woof.api = http://localhost:5198
 
+Post {{Woof.api}}/definitions/create
+Content-Type: application/json
+
+{
+  "name": "Crap"
+}
+
+###
+
 Post {{Woof.api}}/definitions/add_sequential
 Content-Type: application/json
 
 {
-  "workflowId": "88560961-a703-4ae7-ad3e-b8e3125f3b4d",
-  "parentStepId": "0abd9acf-36e4-4ed4-a8c4-a4040ab45705",
+  "workflowId": "2b2abd8a-bbd4-4155-9a71-c1a18b7eebd8",
+  "parentStepId": "00000000-0000-0000-0000-000000000000",
   "step": {
     "name": "mult",
     "unit": {

@@ -1,6 +1,7 @@
 ﻿using System.Threading.Channels;
 using Woof.Api.DataAccess;
 using Woof.Api.DataAccess.Entities;
+using Woof.Api.DataAccess.Models.Instance;
 using Woof.Api.Messaging;
 using Woof.Api.Services;
 using Woof.Api.Services.Abstractions;
@@ -14,6 +15,7 @@ public static class ServiceRegistry
     {
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
+        builder.Services.AddLogging();
 
         // messages
         builder.Services.AddSingleton(_ => Channel.CreateUnbounded<WorkflowRun>());
@@ -31,18 +33,9 @@ public static class ServiceRegistry
 
         // runners
         builder.Services.AddScoped<IRunner, Runner>();
-        var type = typeof(IStepRunner<>);
-        var assembly = type.Assembly;
-
-        var stepRunners = assembly
-          .GetTypes()
-          .Where(x =>
-             x.GetInterface(type.Name) != null &&
-             !x.IsAbstract &&
-             !x.IsInterface)
-          .ToList();
-
-        foreach (var sr in stepRunners)
-            builder.Services.AddTransient(sr);
+        
+        builder.Services.AddScoped<IStepRunner<InitialRunStep>, InitialStepRunner>();
+        builder.Services.AddScoped<IStepRunner<LoopRunStep>, LoopStepRunner>();
+        builder.Services.AddScoped<IStepRunner<SequentialRunStep>, SequentialStepRunner>();
     }
 }
