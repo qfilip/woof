@@ -2,6 +2,7 @@
 
 public enum eRunStatus
 {
+    Idle,
     Pending,
     Started,
     Running,

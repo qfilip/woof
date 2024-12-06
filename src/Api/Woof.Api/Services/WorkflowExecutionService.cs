@@ -6,22 +6,26 @@ using Woof.Api.DataAccess.Entities;
 using Woof.Api.DataAccess.Models.Definition;
 using Woof.Api.DataAccess.Models.Instance;
 using Woof.Api.Enums;
+using Woof.Api.Services.Abstractions;
 
 namespace Woof.Api.Services;
 
 public class WorkflowExecutionService
 {
+    private readonly IRunner _runner;
     private readonly ExecSearchService _ess;
     private readonly ChannelWriter<WorkflowRun> _writer;
     private readonly LiteDbContext<WorkflowRun> _runDbContext;
     private readonly LiteDbContext<Workflow> _definitionDbContext;
 
     public WorkflowExecutionService(
+        IRunner runner,
         ExecSearchService ess,
         ChannelWriter<WorkflowRun> writer,
         LiteDbContext<WorkflowRun> runDbContext,
         LiteDbContext<Workflow> definitionDbContext)
     {
+        _runner = runner;
         _ess = ess;
         _writer = writer;
         _runDbContext = runDbContext;
@@ -72,46 +76,13 @@ public class WorkflowExecutionService
             return;
         }
 
-        var runTask = currentRunStep switch
-        {
-            InitialRunStep init => RunStepAsync(init),
-            SequentialRunStep seq => RunStepAsync(seq),
-            LoopRunStep loop => RunStepAsync(loop),
-            _ => throw new UnreachableException("Unsupported step type.")
-        };
-
-        var stdErr = await runTask;
+        var stdErr = await _runner.RunStepAsync(currentRunStep);
         _runDbContext.Update(wfr);
 
         var noError = stdErr?.Length == 0;
         
         if (noError)
             await _writer.WriteAsync(wfr);
-    }
-
-    private Task<string> RunStepAsync(InitialRunStep step)
-    {
-        step.State.Completed = true;
-        return Task.FromResult(string.Empty);
-    }
-
-    private Task<string> RunStepAsync(SequentialRunStep step)
-    {
-        step.State.Completed = true;
-        return RunUnitAsync(step.ExecutablePath, step.Arguments);
-    }
-
-    private async Task<string> RunStepAsync(LoopRunStep step)
-    {
-        if (step.CurrentLoopCount == step.LoopCount)
-        {
-            step.State.Completed = true;
-            return string.Empty;
-        }
-        var stdErr = await RunUnitAsync(step.ExecutablePath, step.Arguments);
-        step.CurrentLoopCount++;
-
-        return stdErr;
     }
 
     private Opcode<WorkflowRun> CreateWorkflowRun(Workflow wf)
@@ -202,20 +173,4 @@ public class WorkflowExecutionService
 
         return null;
     }
-    private async Task<string> RunUnitAsync(string executablePath, string? arguments)
-    {
-        var info = new ProcessStartInfo()
-        {
-            FileName = executablePath,
-            Arguments = arguments,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-        };
-
-        using var proc = Process.Start(info);
-        await proc!.WaitForExitAsync();
-
-        return await proc.StandardError.ReadToEndAsync();
-    }
-
 }
