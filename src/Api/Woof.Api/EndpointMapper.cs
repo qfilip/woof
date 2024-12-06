@@ -12,19 +12,35 @@ public static class EndpointMapper
     {
         var group = app.MapGroup("definitions");
         
-        group.MapGet("", (LiteDbContext<Workflow> wfdb) => Results.Ok(wfdb.GetAll()));
+        group.MapGet("", async (YamlFileStore<Workflow> store) =>
+        {
+            var result = store.QueryAsync(xs => xs);
+            return Results.Ok(result);
+        });
 
-        group.MapGet("find", (Guid workflowId, LiteDbContext<Workflow> wfdb) =>
-            Results.Ok(wfdb.FindAll(x => x.Id == workflowId)));
+        group.MapGet("find", (Guid workflowId, YamlFileStore<Workflow> store) =>
+        {
+            var result = store.QueryAsync(xs => xs.FirstOrDefault(x => x.Id == workflowId));
+            return Results.Ok(result);
+        });
 
-        group.MapPost("create", (CreateWorkflowDto dto, WorkflowBuilderService wfs) =>
-            Results.Ok(wfs.Create(dto.WorkflowName!)));
+        group.MapPost("create", async (CreateWorkflowDto dto, WorkflowBuilderService wfs) =>
+        {
+            var result = await wfs.CreateAsync(dto.WorkflowName);
+            return Results.Ok(result);
+        });
 
-        group.MapPost("add_sequential", (AddSequentialStepDto dto, WorkflowBuilderService wfs) =>
-            wfs.AddNextStep<SequentialStep>(dto.WorkflowId, dto.ParentStepId, dto.Step).ToResult());
+        group.MapPost("add_sequential", async (AddSequentialStepDto dto, WorkflowBuilderService wfs) =>
+        {
+            var result = await wfs.AddNextStepAsync<SequentialStep>(dto.WorkflowId, dto.ParentStepId, dto.Step);
+            return result.ToResult();
+        });
 
-        group.MapPost("add_loop", (AddLoopStepDto dto, WorkflowBuilderService wfs) =>
-            wfs.AddNextStep<LoopStep>(dto.WorkflowId, dto.ParentStepId, dto.Step).ToResult());
+        group.MapPost("add_loop", async (AddLoopStepDto dto, WorkflowBuilderService wfs) =>
+        {
+            var result = await wfs.AddNextStepAsync<LoopStep>(dto.WorkflowId, dto.ParentStepId, dto.Step);
+            return result.ToResult();
+        });
     }
 
     public static void AddRunEndpoints(this WebApplication app)
@@ -32,6 +48,9 @@ public static class EndpointMapper
         var group = app.MapGroup("runs");
 
         group.MapPost("", async (RunWorkflowDto dto, WorkflowExecutionService wes) =>
-            wes.StartWorkflowAsync(dto.WorkflowId));
+        {
+            var result = await wes.StartWorkflowAsync(dto.WorkflowId);
+            return result.ToResult();
+        });
     }
 }

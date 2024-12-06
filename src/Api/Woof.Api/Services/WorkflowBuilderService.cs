@@ -6,16 +6,16 @@ namespace Woof.Api.Services;
 
 public class WorkflowBuilderService
 {
-    private readonly LiteDbContext<Workflow> _dbContext;
+    private readonly YamlFileStore<Workflow> _fs;
     private readonly ExecSearchService _ess;
 
-    public WorkflowBuilderService(LiteDbContext<Workflow> dbContext, ExecSearchService ess)
+    public WorkflowBuilderService(YamlFileStore<Workflow> fs, ExecSearchService ess)
     {
-        _dbContext = dbContext;
+        _fs = fs;
         _ess = ess;
     }
 
-    public Workflow Create(string name)
+    public async Task<Workflow> CreateAsync(string name)
     {
         var wf = new Workflow
         {
@@ -25,14 +25,18 @@ public class WorkflowBuilderService
             { ExecutableName = string.Empty },
         };
         
-        _dbContext.Insert(wf);
+        _fs.Command(xs => xs.Add(wf));
+        await _fs.CompleteAsync();
 
         return wf;
     }
 
-    public Opcode<Workflow> AddNextStep<T>(Guid workflowId, Guid targetStepId, WorkflowStep nextStep) where T : WorkflowStep
+    public async Task<Opcode<Workflow>> AddNextStepAsync<T>(
+        Guid workflowId,
+        Guid targetStepId,
+        WorkflowStep nextStep) where T : WorkflowStep
     {
-        var wf = _dbContext.Find(x => x.Id == workflowId);
+        var wf = await _fs.QueryAsync(xs => xs.FirstOrDefault(x => x.Id == workflowId));
         if (wf == null) return Opcode<Workflow>.NotFound("Workflow not found.");
 
         var (hasExecutable, _) = _ess.TryFindExecutable(nextStep);
@@ -41,20 +45,28 @@ public class WorkflowBuilderService
 
         nextStep.Id = Guid.NewGuid();
         var stepAdded = AddNextStep(wf.InitialStep, targetStepId, nextStep);
-        _dbContext.Update(wf);
+        
+        if(stepAdded)
+        {
+            await _fs.UpdateAsync(wf);
+        }
 
         return stepAdded ? Opcode<Workflow>.Ok(wf) : Opcode<Workflow>.NotFound("Parent step not found.");
     }
 
-    public Opcode<Workflow> RemoveStep(Guid workflowId, Guid stepId)
+    public async Task<Opcode<Workflow>> RemoveStepAsync(Guid workflowId, Guid stepId)
     {
-        var wf = _dbContext.Find(x => x.Id == workflowId);
+        var wf = await _fs.QueryAsync(xs => xs.FirstOrDefault(x => x.Id == workflowId));
         if (wf == null) return Opcode<Workflow>.NotFound("Workflow not found.");
 
         if(wf.InitialStep ==  null) return Opcode<Workflow>.NotFound();
 
         var stepRemoved = RemoveStep(wf.InitialStep, stepId);
-        _dbContext.Update(wf);
+
+        if (stepRemoved)
+        {
+            await _fs.UpdateAsync(wf);
+        }
 
         return stepRemoved ? Opcode<Workflow>.Ok(wf) : Opcode<Workflow>.NotFound("Step not found.");
     }

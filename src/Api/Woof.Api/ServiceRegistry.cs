@@ -1,9 +1,8 @@
 ﻿using System.Threading.Channels;
-using Woof.Api.DataAccess.Entities;
-using Woof.Api.DataAccess.Extensions;
 using Woof.Api.DataAccess;
-using Woof.Api.Services;
+using Woof.Api.DataAccess.Entities;
 using Woof.Api.Messaging;
+using Woof.Api.Services;
 using Woof.Api.Services.Abstractions;
 using Woof.Api.Services.Runners;
 
@@ -22,20 +21,8 @@ public static class ServiceRegistry
         builder.Services.AddSingleton(sp => sp.GetRequiredService<Channel<WorkflowRun>>().Reader);
         builder.Services.AddHostedService<ChannelHostingService>();
 
-        // database
-        builder.Services.AddSingleton(_ => new LiteDbConfig(builder.Environment));
-        
-        builder.Services.AddScoped(sp =>
-        {
-            var config = sp.GetRequiredService<LiteDbConfig>()!;
-            return new LiteDbContext<Workflow>(config, "workflows");
-        });
-
-        builder.Services.AddScoped(sp =>
-        {
-            var config = sp.GetRequiredService<LiteDbConfig>()!;
-            return new LiteDbContext<WorkflowRun>(config, "workflow_runs");
-        });
+        builder.Services.AddYamlFileStore<Workflow>(builder.Environment, "workflows.yaml");
+        builder.Services.AddYamlFileStore<WorkflowRun>(builder.Environment, "workflow_runs.yaml");
 
         // services
         builder.Services.AddScoped<WorkflowBuilderService>();

@@ -3,7 +3,7 @@ using Woof.Api.Enums;
 
 namespace Woof.Api.DataAccess.Entities;
 
-public class WorkflowRun : LiteDbContextEntity
+public class WorkflowRun : YamlEntity
 {
     public Guid WorkflowId { get; set; }
     public InitialRunStep? InitialStep { get; set; }

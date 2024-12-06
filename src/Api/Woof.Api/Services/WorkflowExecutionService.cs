@@ -15,29 +15,29 @@ public class WorkflowExecutionService
     private readonly IRunner _runner;
     private readonly ExecSearchService _ess;
     private readonly ChannelWriter<WorkflowRun> _writer;
-    private readonly LiteDbContext<WorkflowRun> _runDbContext;
-    private readonly LiteDbContext<Workflow> _definitionDbContext;
+    private readonly YamlFileStore<WorkflowRun> _runStore;
+    private readonly YamlFileStore<Workflow> _defStore;
 
     public WorkflowExecutionService(
         IRunner runner,
         ExecSearchService ess,
         ChannelWriter<WorkflowRun> writer,
-        LiteDbContext<WorkflowRun> runDbContext,
-        LiteDbContext<Workflow> definitionDbContext)
+        YamlFileStore<WorkflowRun> runStore,
+        YamlFileStore<Workflow> defStore)
     {
         _runner = runner;
         _ess = ess;
         _writer = writer;
-        _runDbContext = runDbContext;
-        _definitionDbContext = definitionDbContext;
+        _runStore = runStore;
+        _defStore = defStore;
     }
 
     public async Task<Opcode<WorkflowRun>> StartWorkflowAsync(Guid workflowId)
     {
-        var wf = _definitionDbContext.Find(x => x.Id == workflowId);
+        var wf = await _defStore.QueryAsync(xs => xs.FirstOrDefault(x => x.Id == workflowId));
         if (wf == null) return Opcode<WorkflowRun>.NotFound("Workflow not found.");
 
-        var opcode = CreateWorkflowRun(wf);
+        var opcode = await CreateWorkflowRunAsync(wf);
 
         if (!opcode.Errors.Any()) return opcode;
 
@@ -56,7 +56,7 @@ public class WorkflowExecutionService
         var workflowError = FindRunStep(wfr, x => x.State.StdErr?.Length > 0);
         if (workflowError != null)
         {
-            _runDbContext.Update(wfr);
+            await _runStore.UpdateAsync(wfr);
             return;
         }
 
@@ -64,7 +64,7 @@ public class WorkflowExecutionService
         if (currentRunStep == null)
         {
             wfr.RunStatus = eRunStatus.Done;
-            _runDbContext.Update(wfr);
+            await _runStore.UpdateAsync(wfr);
             return;
         }
         
@@ -72,12 +72,12 @@ public class WorkflowExecutionService
         {
             currentRunStep.State.Completed = true;
             currentRunStep.State.Status = "Executable file not found";
-            _runDbContext.Update(wfr);
+            await _runStore.UpdateAsync(wfr);
             return;
         }
 
         var stdErr = await _runner.RunStepAsync(currentRunStep);
-        _runDbContext.Update(wfr);
+        await _runStore.UpdateAsync(wfr);
 
         var noError = stdErr?.Length == 0;
         
@@ -85,7 +85,7 @@ public class WorkflowExecutionService
             await _writer.WriteAsync(wfr);
     }
 
-    private Opcode<WorkflowRun> CreateWorkflowRun(Workflow wf)
+    private async Task<Opcode<WorkflowRun>> CreateWorkflowRunAsync(Workflow wf)
     {
         var errors = new List<string>();
         
@@ -143,7 +143,8 @@ public class WorkflowExecutionService
             InitialStep = initRunStep as InitialRunStep
         };
 
-        _runDbContext.Insert(wfr);
+        _runStore.Command(xs => xs.Add(wfr));
+        await _runStore.CompleteAsync();
 
         return Opcode<WorkflowRun>.Ok(wfr);
     }
