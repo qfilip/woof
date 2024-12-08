@@ -1,6 +1,4 @@
-﻿using System.Diagnostics;
-using System.Reflection.Emit;
-using System.Threading.Channels;
+﻿using System.Threading.Channels;
 using Woof.Api.DataAccess;
 using Woof.Api.DataAccess.Entities;
 using Woof.Api.DataAccess.Models.Definition;
@@ -15,16 +13,16 @@ public class WorkflowExecutionService
     private readonly IRunner _runner;
     private readonly ExecSearchService _ess;
     private readonly ChannelWriter<WorkflowRun> _writer;
-    private readonly YamlFileStore<WorkflowRun> _runStore;
-    private readonly YamlFileStore<Workflow> _defStore;
+    private readonly JsonFileStore<WorkflowRun> _runStore;
+    private readonly JsonFileStore<Workflow> _defStore;
     private readonly ILogger<WorkflowExecutionService> _logger;
 
     public WorkflowExecutionService(
         IRunner runner,
         ExecSearchService ess,
         ChannelWriter<WorkflowRun> writer,
-        YamlFileStore<WorkflowRun> runStore,
-        YamlFileStore<Workflow> defStore,
+        JsonFileStore<WorkflowRun> runStore,
+        JsonFileStore<Workflow> defStore,
         ILogger<WorkflowExecutionService> logger)
     {
         _runner = runner;
@@ -42,7 +40,7 @@ public class WorkflowExecutionService
 
         var opcode = await CreateWorkflowRunAsync(wf);
 
-        if (!opcode.Errors.Any()) return opcode;
+        if (opcode.Errors.Any()) return opcode;
 
         await _writer.WriteAsync(opcode.Data!);
 
@@ -53,12 +51,14 @@ public class WorkflowExecutionService
     {
         if (wfr.RunStatus == eRunStatus.Done)
         {
+            _logger.LogInformation("Workflow {WorkflowId} done", wfr.Id);
             return;
         }
 
         var workflowError = FindRunStep(wfr, x => x.State.StdErr?.Length > 0);
         if (workflowError != null)
         {
+            _logger.LogInformation("Workflow {WorkflowId} ended with error", wfr.Id);
             await _runStore.UpdateAsync(wfr);
             return;
         }
@@ -66,6 +66,7 @@ public class WorkflowExecutionService
         var currentRunStep = FindRunStep(wfr, x => !x.State.Completed);
         if (currentRunStep == null)
         {
+            _logger.LogInformation("Workflow {WorkflowId} done", wfr.Id);
             wfr.RunStatus = eRunStatus.Done;
             await _runStore.UpdateAsync(wfr);
             return;
@@ -73,17 +74,30 @@ public class WorkflowExecutionService
         
         if(!File.Exists(currentRunStep.ExecutablePath))
         {
+            _logger.LogInformation("Workflow {WorkflowId} step {StepId} no executable file found",
+                wfr.Id,
+                currentRunStep.Id);
+
             currentRunStep.State.Completed = true;
             currentRunStep.State.Status = "Executable file not found";
             await _runStore.UpdateAsync(wfr);
             return;
         }
 
+        _logger.LogInformation("Worfklow {WorkflowId} running step {StepId}",
+            wfr.Id,
+            currentRunStep.Id);
+
         var stdErr = await _runner.RunStepAsync(currentRunStep);
         await _runStore.UpdateAsync(wfr);
 
         var noError = stdErr?.Length == 0;
-        
+
+        _logger.LogInformation("Worfklow {WorkflowId} finished step {StepId} without errors {NoErrors}",
+            wfr.Id,
+            currentRunStep.Id,
+            noError);
+
         if (noError)
             await _writer.WriteAsync(wfr);
     }
@@ -96,35 +110,22 @@ public class WorkflowExecutionService
         {
             if (step == null) return null;
 
-            var (ok, pathOrError) = _ess.TryFindExecutable(step);
+            var (ok, pathOrError) = _ess.MapExecutableFullPath(step);
             if (!ok)
-                errors.Add($"Executable {step.ExecutableName} not found.");
+                errors.Add($"{pathOrError} at step {step.Id}.");
 
-            WorkflowRunStep runStep = step switch
+            var runStep = new WorkflowRunStep
             {
-                InitialStep init => new InitialRunStep
+                Id = step.Id,
+                Name = step.Name,
+                Arguments = step.Arguments,
+                ExecutablePath = pathOrError,
+                State = new(),
+                LoopParameters = step.LoopParameters == null ? null : new LoopRunStepParameters
                 {
-                    Id = init.Id,
-                    Name = init.Name,
-                    Arguments = init.Arguments,
-                    ExecutablePath = pathOrError
+                    LoopCount = step.LoopParameters.LoopCount
                 },
-                SequentialStep seq => new SequentialRunStep()
-                {
-                    Id = seq.Id,
-                    Name = seq.Name,
-                    Arguments = seq.Arguments,
-                    ExecutablePath = pathOrError
-                },
-                LoopStep loop => new LoopRunStep()
-                {
-                    Id = loop.Id,
-                    Name = loop.Name,
-                    Arguments = loop.Arguments,
-                    ExecutablePath = pathOrError,
-                    LoopCount = loop.LoopCount
-                },
-                _ => throw new UnreachableException("Step type not supported")
+                SequentialParameters = step.SequentialParameters == null ? null : new()
             };
 
             runStep.Next = MapSubsteps(step.Next);
@@ -132,7 +133,7 @@ public class WorkflowExecutionService
             return runStep;
         }
 
-        var initRunStep = MapSubsteps(wf.InitialStep);
+        var initRunStep = MapSubsteps(wf.InitStep);
         
         if(errors.Any())
         {
@@ -143,7 +144,7 @@ public class WorkflowExecutionService
         {
             Id = Guid.NewGuid(),
             WorkflowId = wf.Id,
-            InitialStep = initRunStep as InitialRunStep
+            InitStep = initRunStep!
         };
 
         _runStore.Command(xs => xs.Add(wfr));
@@ -153,7 +154,7 @@ public class WorkflowExecutionService
     }
     private WorkflowStep? FindStep(Workflow wf, Func<WorkflowStep, bool> predicate)
     {
-        WorkflowStep? currentStep = wf.InitialStep;
+        WorkflowStep? currentStep = wf.InitStep;
         while (currentStep != null)
         {
             if (predicate(currentStep))
@@ -166,7 +167,8 @@ public class WorkflowExecutionService
     }
     private WorkflowRunStep? FindRunStep(WorkflowRun wfr, Func<WorkflowRunStep, bool> predicate)
     {
-        WorkflowRunStep? currentStep = wfr.InitialStep;
+        WorkflowRunStep? currentStep = wfr.InitStep;
+        
         while (currentStep != null)
         {
             if (predicate(currentStep))

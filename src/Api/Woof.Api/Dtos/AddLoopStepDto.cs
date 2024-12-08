@@ -5,5 +5,5 @@ namespace Woof.Api.Dtos;
 public record AddLoopStepDto(
     Guid WorkflowId,
     Guid ParentStepId,
-    LoopStep Step
+    WorkflowStep Step
 );

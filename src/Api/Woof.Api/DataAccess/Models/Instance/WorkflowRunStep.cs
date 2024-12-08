@@ -1,6 +1,4 @@
-﻿using Woof.Api.DataAccess.Models.Definition;
-
-namespace Woof.Api.DataAccess.Models.Instance;
+﻿namespace Woof.Api.DataAccess.Models.Instance;
 
 public class WorkflowRunStep
 {
@@ -9,5 +7,7 @@ public class WorkflowRunStep
     public required string ExecutablePath { get; set; }
     public string? Arguments { get; set; }
     public StepState State { get; set; } = new();
+    public LoopRunStepParameters? LoopParameters { get; set; }
+    public SequentialRunStepParameters? SequentialParameters { get; set; }
     public WorkflowRunStep? Next { get; set; }
 }

@@ -1,5 +1,8 @@
 @Woof.api = http://localhost:5198
 
+GET {{Woof.api}}/definitions
+
+###
 Post {{Woof.api}}/definitions/create
 Content-Type: application/json
 
@@ -9,16 +12,35 @@ Content-Type: application/json
 
 ###
 
-Post {{Woof.api}}/definitions/add_sequential
+Post {{Woof.api}}/definitions/add_next_step
 Content-Type: application/json
 
 {
-  "workflowId": "906e621c-ab00-48e4-a009-c56fc9d35bc8",
-  "parentStepId": "00000000-0000-0000-0000-000000000000",
+  "workflowId": "6fe969e7-8e25-4a2a-becb-0f9a5cea94ad",
+  "parentStepId": "f6d23ce2-f764-4df4-83d2-34608e1fd981",
   "step": {
     "name": "mult",
     "executableName": "Exec.Multiply.exe",
-    "arguments": "1 2"
+    "arguments": "1 2",
+    "sequentialParameters": {}
+  }
+}
+
+###
+
+Post {{Woof.api}}/definitions/add_next_step
+Content-Type: application/json
+
+{
+  "workflowId": "6fe969e7-8e25-4a2a-becb-0f9a5cea94ad",
+  "parentStepId": "6e54f9ee-5859-4ee5-a378-936e0b8a1b3f",
+  "step": {
+    "name": "mult",
+    "executableName": "Exec.Multiply.exe",
+    "arguments": "1 2",
+    "loopParameters": {
+      "loopCount": 3
+    }
   }
 }
 
@@ -28,5 +50,5 @@ Post {{Woof.api}}/runs
 Content-Type: application/json
 
 {
-  "workflowId": "88560961-a703-4ae7-ad3e-b8e3125f3b4d"
+  "workflowId": "6fe969e7-8e25-4a2a-becb-0f9a5cea94ad"
 }

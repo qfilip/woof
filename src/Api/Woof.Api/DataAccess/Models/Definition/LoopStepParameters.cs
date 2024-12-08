@@ -1,6 +1,6 @@
 ﻿namespace Woof.Api.DataAccess.Models.Definition;
 
-public class LoopStep : WorkflowStep
+public class LoopStepParameters
 {
     public int LoopCount { get; set; }
 }

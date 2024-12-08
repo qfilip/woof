@@ -11,17 +11,8 @@ public class ExecSearchService
         _execsRootPath = execsRootPath;
     }
 
-    public (bool, string) TryFindExecutable<T>(T step) where T : WorkflowStep
+    public (bool, string) MapExecutableFullPath<T>(T step) where T : WorkflowStep
     {
-        var initialStep = step switch
-        {
-            InitialStep => true,
-            _ => false
-        };
-
-        if (initialStep)
-            return (true, string.Empty);
-
         var files = Directory.GetFiles(_execsRootPath, step.ExecutableName, SearchOption.AllDirectories);
 
         return files.Length switch

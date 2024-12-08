@@ -1,5 +1,5 @@
 ﻿namespace Woof.Api.DataAccess.Models.Definition;
 
-public class InitialStep : WorkflowStep
+public class SequentialStepParameters
 {
 }

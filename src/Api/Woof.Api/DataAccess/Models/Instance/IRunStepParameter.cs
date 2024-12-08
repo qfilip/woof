@@ -1,5 +1,5 @@
 ﻿namespace Woof.Api.DataAccess.Models.Instance;
 
-public class InitialRunStep : WorkflowRunStep
+public interface IRunStepParameter
 {
 }

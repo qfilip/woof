@@ -12,13 +12,13 @@ public static class EndpointMapper
     {
         var group = app.MapGroup("definitions");
         
-        group.MapGet("", async (YamlFileStore<Workflow> store) =>
+        group.MapGet("", async (JsonFileStore<Workflow> store) =>
         {
-            var result = store.QueryAsync(xs => xs);
+            var result = await store.QueryAsync(xs => xs);
             return Results.Ok(result);
         });
 
-        group.MapGet("find", (Guid workflowId, YamlFileStore<Workflow> store) =>
+        group.MapGet("find", (Guid workflowId, JsonFileStore<Workflow> store) =>
         {
             var result = store.QueryAsync(xs => xs.FirstOrDefault(x => x.Id == workflowId));
             return Results.Ok(result);
@@ -30,15 +30,9 @@ public static class EndpointMapper
             return Results.Ok(result);
         });
 
-        group.MapPost("add_sequential", async (AddSequentialStepDto dto, WorkflowBuilderService wfs) =>
+        group.MapPost("add_next_step", async (AddNextStepDto dto, WorkflowBuilderService wfs) =>
         {
-            var result = await wfs.AddNextStepAsync<SequentialStep>(dto.WorkflowId, dto.ParentStepId, dto.Step);
-            return result.ToResult();
-        });
-
-        group.MapPost("add_loop", async (AddLoopStepDto dto, WorkflowBuilderService wfs) =>
-        {
-            var result = await wfs.AddNextStepAsync<LoopStep>(dto.WorkflowId, dto.ParentStepId, dto.Step);
+            var result = await wfs.AddNextStepAsync(dto);
             return result.ToResult();
         });
     }

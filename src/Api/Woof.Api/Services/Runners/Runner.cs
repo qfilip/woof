@@ -6,16 +6,13 @@ namespace Woof.Api.Services.Runners;
 
 public class Runner : IRunner
 {
-    private readonly IStepRunner<InitialRunStep> _initRunner;
-    private readonly IStepRunner<LoopRunStep> _loopRunner;
-    private readonly IStepRunner<SequentialRunStep> _sequentialRunner;
+    private readonly IStepRunner<LoopRunStepParameters> _loopRunner;
+    private readonly IStepRunner<SequentialRunStepParameters> _sequentialRunner;
 
     public Runner(
-        IStepRunner<InitialRunStep> initRunner,
-        IStepRunner<LoopRunStep> loopRunner,
-        IStepRunner<SequentialRunStep> sequentialRunner)
+        IStepRunner<LoopRunStepParameters> loopRunner,
+        IStepRunner<SequentialRunStepParameters> sequentialRunner)
     {
-        _initRunner = initRunner;
         _loopRunner = loopRunner;
         _sequentialRunner = sequentialRunner;
     }
@@ -23,10 +20,9 @@ public class Runner : IRunner
     {
         var runTask = step switch
         {
-            InitialRunStep init => _initRunner.RunStepAsync(init),
-            LoopRunStep loop => _loopRunner.RunStepAsync(loop),
-            SequentialRunStep seq => _sequentialRunner.RunStepAsync(seq),
-            _ => throw new UnreachableException("Unsupported step type.")
+            { LoopParameters: not null } => _loopRunner.RunStepAsync(step, step.LoopParameters),
+            { SequentialParameters: not null } => _sequentialRunner.RunStepAsync(step, step.SequentialParameters),
+            _ => throw new UnreachableException($"Step parameters not found for {step.Id}")
         };
 
         return runTask;

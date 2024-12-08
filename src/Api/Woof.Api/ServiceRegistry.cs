@@ -23,8 +23,8 @@ public static class ServiceRegistry
         builder.Services.AddSingleton(sp => sp.GetRequiredService<Channel<WorkflowRun>>().Reader);
         builder.Services.AddHostedService<ChannelHostingService>();
 
-        builder.Services.AddYamlFileStore<Workflow>(builder.Environment, "workflows.yaml");
-        builder.Services.AddYamlFileStore<WorkflowRun>(builder.Environment, "workflow_runs.yaml");
+        builder.Services.AddJsonFileStore<Workflow>(builder.Environment, "workflows.json");
+        builder.Services.AddJsonFileStore<WorkflowRun>(builder.Environment, "workflow_runs.json");
 
         // services
         builder.Services.AddScoped<WorkflowBuilderService>();
@@ -34,8 +34,7 @@ public static class ServiceRegistry
         // runners
         builder.Services.AddScoped<IRunner, Runner>();
         
-        builder.Services.AddScoped<IStepRunner<InitialRunStep>, InitialStepRunner>();
-        builder.Services.AddScoped<IStepRunner<LoopRunStep>, LoopStepRunner>();
-        builder.Services.AddScoped<IStepRunner<SequentialRunStep>, SequentialStepRunner>();
+        builder.Services.AddScoped<IStepRunner<LoopRunStepParameters>, LoopStepRunner>();
+        builder.Services.AddScoped<IStepRunner<SequentialRunStepParameters>, SequentialStepRunner>();
     }
 }

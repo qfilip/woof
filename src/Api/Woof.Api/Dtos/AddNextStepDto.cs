@@ -2,8 +2,8 @@
 
 namespace Woof.Api.Dtos;
 
-public record AddSequentialStepDto(
+public record AddNextStepDto(
     Guid WorkflowId,
-    Guid ParentStepId,
-    SequentialStep Step
+    Guid? ParentStepId,
+    WorkflowStep Step
 );
