@@ -7,10 +7,10 @@ namespace Woof.Api.Services;
 
 public class WorkflowBuilderService
 {
-    private readonly JsonFileStore<Workflow> _fs;
+    private readonly IFileStore<Workflow> _fs;
     private readonly ExecSearchService _ess;
 
-    public WorkflowBuilderService(JsonFileStore<Workflow> fs, ExecSearchService ess)
+    public WorkflowBuilderService(IFileStore<Workflow> fs, ExecSearchService ess)
     {
         _fs = fs;
         _ess = ess;

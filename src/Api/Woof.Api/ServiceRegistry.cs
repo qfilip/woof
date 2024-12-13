@@ -23,8 +23,9 @@ public static class ServiceRegistry
         builder.Services.AddSingleton(sp => sp.GetRequiredService<Channel<WorkflowRun>>().Reader);
         builder.Services.AddHostedService<ChannelHostingService>();
 
-        builder.Services.AddJsonFileStore<Workflow>(builder.Environment, "workflows.json");
-        builder.Services.AddJsonFileStore<WorkflowRun>(builder.Environment, "workflow_runs.json");
+        // file stores
+        builder.Services.AddYamlFileStore<Workflow>(builder.Environment, "workflows.yaml");
+        builder.Services.AddYamlFileStore<WorkflowRun>(builder.Environment, "workflow_runs.yaml");
 
         // services
         builder.Services.AddScoped<WorkflowBuilderService>();

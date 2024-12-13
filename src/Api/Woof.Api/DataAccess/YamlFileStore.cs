@@ -4,7 +4,7 @@ using YamlDotNet.Serialization.NamingConventions;
 
 namespace Woof.Api.DataAccess;
 
-public class YamlFileStore<T> where T : YamlEntity
+public class YamlFileStore<T> : IFileStore<T> where T : FileEntity
 {
     private readonly string _filePath;
     private List<Action<List<T>>> _commands = new();
@@ -86,8 +86,11 @@ public class YamlFileStore<T> where T : YamlEntity
 
 public static class YamlFileStoreExtensions
 {
-    public static void AddYamlFileStore<T>(this IServiceCollection services, IWebHostEnvironment env, string fileName) where T : YamlEntity
+    public static void AddYamlFileStore<T>(
+        this IServiceCollection services,
+        IWebHostEnvironment env,
+        string fileName) where T : FileEntity
     {
-        services.AddScoped(_ => YamlFileStore<T>.Create(env, fileName));
+        services.AddScoped<IFileStore<T>>(_ => YamlFileStore<T>.Create(env, fileName));
     }
 }

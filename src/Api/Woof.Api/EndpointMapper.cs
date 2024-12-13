@@ -12,13 +12,13 @@ public static class EndpointMapper
     {
         var group = app.MapGroup("definitions");
         
-        group.MapGet("", async (JsonFileStore<Workflow> store) =>
+        group.MapGet("", async (IFileStore<Workflow> store) =>
         {
             var result = await store.QueryAsync(xs => xs);
             return Results.Ok(result);
         });
 
-        group.MapGet("find", (Guid workflowId, JsonFileStore<Workflow> store) =>
+        group.MapGet("find", (Guid workflowId, IFileStore<Workflow> store) =>
         {
             var result = store.QueryAsync(xs => xs.FirstOrDefault(x => x.Id == workflowId));
             return Results.Ok(result);

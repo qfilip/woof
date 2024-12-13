@@ -2,7 +2,7 @@
 
 namespace Woof.Api.DataAccess.Entities;
 
-public class Workflow : YamlEntity
+public class Workflow : FileEntity
 {
     public string? Name { get; set; }
     public WorkflowStep? InitStep { get; set; }

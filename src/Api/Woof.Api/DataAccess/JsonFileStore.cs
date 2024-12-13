@@ -3,7 +3,7 @@ using Woof.Api.DataAccess.Entities;
 
 namespace Woof.Api.DataAccess;
 
-public class JsonFileStore<T> where T : YamlEntity
+public class JsonFileStore<T> : IFileStore<T> where T : FileEntity
 {
     private readonly string _filePath;
     private List<Action<List<T>>> _commands = new();
@@ -76,8 +76,11 @@ public class JsonFileStore<T> where T : YamlEntity
 
 public static class JsonFileStoreExtensions
 {
-    public static void AddJsonFileStore<T>(this IServiceCollection services, IWebHostEnvironment env, string fileName) where T : YamlEntity
+    public static void AddJsonFileStore<T>(
+        this IServiceCollection services,
+        IWebHostEnvironment env,
+        string fileName) where T : FileEntity
     {
-        services.AddScoped(_ => JsonFileStore<T>.Create(env, fileName));
+        services.AddScoped<IFileStore<T>>(_ => JsonFileStore<T>.Create(env, fileName));
     }
 }

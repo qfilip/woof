@@ -16,8 +16,8 @@ Post {{Woof.api}}/definitions/add_next_step
 Content-Type: application/json
 
 {
-  "workflowId": "6fe969e7-8e25-4a2a-becb-0f9a5cea94ad",
-  "parentStepId": "f6d23ce2-f764-4df4-83d2-34608e1fd981",
+  "workflowId": "eb9b37c8-e1dd-43b3-b7ed-a57375b80906",
+  "parentStepId": null,
   "step": {
     "name": "mult",
     "executableName": "Exec.Multiply.exe",
@@ -32,8 +32,8 @@ Post {{Woof.api}}/definitions/add_next_step
 Content-Type: application/json
 
 {
-  "workflowId": "6fe969e7-8e25-4a2a-becb-0f9a5cea94ad",
-  "parentStepId": "6e54f9ee-5859-4ee5-a378-936e0b8a1b3f",
+  "workflowId": "eb9b37c8-e1dd-43b3-b7ed-a57375b80906",
+  "parentStepId": "96c01ed8-7df0-4d2c-ab0d-fc67bf281d16",
   "step": {
     "name": "mult",
     "executableName": "Exec.Multiply.exe",
@@ -50,5 +50,5 @@ Post {{Woof.api}}/runs
 Content-Type: application/json
 
 {
-  "workflowId": "6fe969e7-8e25-4a2a-becb-0f9a5cea94ad"
+  "workflowId": "eb9b37c8-e1dd-43b3-b7ed-a57375b80906"
 }

@@ -13,16 +13,16 @@ public class WorkflowExecutionService
     private readonly IRunner _runner;
     private readonly ExecSearchService _ess;
     private readonly ChannelWriter<WorkflowRun> _writer;
-    private readonly JsonFileStore<WorkflowRun> _runStore;
-    private readonly JsonFileStore<Workflow> _defStore;
+    private readonly IFileStore<WorkflowRun> _runStore;
+    private readonly IFileStore<Workflow> _defStore;
     private readonly ILogger<WorkflowExecutionService> _logger;
 
     public WorkflowExecutionService(
         IRunner runner,
         ExecSearchService ess,
         ChannelWriter<WorkflowRun> writer,
-        JsonFileStore<WorkflowRun> runStore,
-        JsonFileStore<Workflow> defStore,
+        IFileStore<WorkflowRun> runStore,
+        IFileStore<Workflow> defStore,
         ILogger<WorkflowExecutionService> logger)
     {
         _runner = runner;

@@ -3,7 +3,7 @@ using Woof.Api.Enums;
 
 namespace Woof.Api.DataAccess.Entities;
 
-public class WorkflowRun : YamlEntity
+public class WorkflowRun : FileEntity
 {
     public Guid WorkflowId { get; set; }
     public required WorkflowRunStep InitStep { get; set; }
