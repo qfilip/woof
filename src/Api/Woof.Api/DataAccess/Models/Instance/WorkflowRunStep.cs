@@ -4,7 +4,7 @@ namespace Woof.Api.DataAccess.Models.Instance;
 
 [JsonDerivedType(typeof(SequentialRunStep), typeDiscriminator: "sequentialRunStep")]
 [JsonDerivedType(typeof(LoopRunStep), typeDiscriminator: "loopRunStep")]
-public class WorkflowRunStep
+public class WorkflowRunStep : IStep
 {
     public Guid Id { get; set; }
     public string? Name { get; set; }

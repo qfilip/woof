@@ -12,33 +12,32 @@ Content-Type: application/json
 
 ###
 
-Post {{Woof.api}}/definitions/add_next_sequential
+Post {{Woof.api}}/definitions/add_sequential
 Content-Type: application/json
 
 {
-  "workflowId": "eb9b37c8-e1dd-43b3-b7ed-a57375b80906",
+  "workflowId": "34c2b80a-c6e3-49be-b882-21462d9dfc3f",
   "parentStepId": null,
   "step": {
     "name": "mult",
     "executableName": "Exec.Multiply.exe",
-    "arguments": "1 2",
-    "sequentialParameters": {}
+    "arguments": "1 2"
   }
 }
 
 ###
 
-Post {{Woof.api}}/definitions/add_next_loop
+Post {{Woof.api}}/definitions/add_loop
 Content-Type: application/json
 
 {
-  "workflowId": "eb9b37c8-e1dd-43b3-b7ed-a57375b80906",
-  "parentStepId": "96c01ed8-7df0-4d2c-ab0d-fc67bf281d16",
+  "workflowId": "34c2b80a-c6e3-49be-b882-21462d9dfc3f",
+  "parentStepId": "baf99148-6bb1-4db8-99f7-57a5ac30d461",
   "step": {
     "name": "mult",
     "executableName": "Exec.Multiply.exe",
     "arguments": "1 2",
-    "loopParameters": {
+    "parameters": {
       "loopCount": 3
     }
   }
@@ -50,5 +49,5 @@ Post {{Woof.api}}/runs
 Content-Type: application/json
 
 {
-  "workflowId": "eb9b37c8-e1dd-43b3-b7ed-a57375b80906"
+  "workflowId": "34c2b80a-c6e3-49be-b882-21462d9dfc3f"
 }

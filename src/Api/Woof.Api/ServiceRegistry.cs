@@ -1,6 +1,8 @@
 ﻿using System.Threading.Channels;
 using Woof.Api.DataAccess;
 using Woof.Api.DataAccess.Entities;
+using Woof.Api.DataAccess.Models;
+using Woof.Api.DataAccess.Models.Definition;
 using Woof.Api.DataAccess.Models.Instance;
 using Woof.Api.Messaging;
 using Woof.Api.Services;
@@ -24,8 +26,8 @@ public static class ServiceRegistry
         builder.Services.AddHostedService<ChannelHostingService>();
 
         // file stores
-        var workflowStepsDiscriminators = GetSteps<Workflow>();
-        var workflowRunStepsDiscriminators = GetSteps<WorkflowRun>();
+        var workflowStepsDiscriminators = GetSteps<WorkflowStep>();
+        var workflowRunStepsDiscriminators = GetSteps<WorkflowRunStep>();
 
         builder.Services.AddYamlFileStore<Workflow>(builder.Environment, "workflows.yaml", workflowStepsDiscriminators);
         builder.Services.AddYamlFileStore<WorkflowRun>(builder.Environment, "workflow_runs.yaml", workflowRunStepsDiscriminators);
@@ -42,16 +44,16 @@ public static class ServiceRegistry
         builder.Services.AddScoped<IStepRunner<SequentialRunStep>, SequentialStepRunner>();
     }
 
-    private static Dictionary<string, Type> GetSteps<T>() where T : FileEntity
+    private static Dictionary<string, Type> GetSteps<T>() where T : IStep
     {
         var baseType = typeof(T);
-        
-        return baseType
+
+        var arr = baseType
             .Assembly
             .GetTypes()
-            .Where(t =>
-                t != baseType &&
-                baseType.IsAssignableFrom(t))
-            .ToDictionary(x => x.Name.ToLower(), x => x);
+            .Where(t => t.IsSubclassOf(baseType))
+            .ToArray();
+        
+        return arr.ToDictionary(x => x.Name.ToLower(), x => x);
     }
 }

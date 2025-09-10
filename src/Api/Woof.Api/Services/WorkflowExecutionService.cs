@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using System.Threading.Channels;
+﻿using System.Threading.Channels;
 using Woof.Api.DataAccess;
 using Woof.Api.DataAccess.Entities;
 using Woof.Api.DataAccess.Models.Definition;
