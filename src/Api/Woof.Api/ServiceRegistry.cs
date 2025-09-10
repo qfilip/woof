@@ -29,8 +29,8 @@ public static class ServiceRegistry
         var workflowStepsDiscriminators = GetSteps<WorkflowStep>();
         var workflowRunStepsDiscriminators = GetSteps<WorkflowRunStep>();
 
-        builder.Services.AddYamlFileStore<Workflow>(builder.Environment, "workflows.yaml", workflowStepsDiscriminators);
-        builder.Services.AddYamlFileStore<WorkflowRun>(builder.Environment, "workflow_runs.yaml", workflowRunStepsDiscriminators);
+        builder.Services.AddYamlFileStore<Workflow, WorkflowStep>(builder.Environment, "workflows.yaml", workflowStepsDiscriminators);
+        builder.Services.AddYamlFileStore<WorkflowRun, WorkflowRunStep>(builder.Environment, "workflow_runs.yaml", workflowRunStepsDiscriminators);
 
         // services
         builder.Services.AddScoped<WorkflowBuilderService>();

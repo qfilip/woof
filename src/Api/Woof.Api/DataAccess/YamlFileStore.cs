@@ -1,9 +1,12 @@
-﻿using YamlDotNet.Serialization;
+﻿using Woof.Api.DataAccess.Models;
+using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
 namespace Woof.Api.DataAccess;
 
-public class YamlFileStore<T> : IFileStore<T> where T : FileEntity
+public class YamlFileStore<T, U> : IFileStore<T>
+    where T : FileEntity
+    where U : IStep
 {
     private readonly string _filePath;
     private List<Action<List<T>>> _commands = new();
@@ -23,19 +26,19 @@ public class YamlFileStore<T> : IFileStore<T> where T : FileEntity
         .WithNamingConvention(CamelCaseNamingConvention.Instance)
         .WithTypeDiscriminatingNodeDeserializer(o =>
         {
-            o.AddKeyValueTypeDiscriminator<T>("type", typeDiscriminators);
+            o.AddKeyValueTypeDiscriminator<U>("type", typeDiscriminators);
         })
         .Build();
     }
 
-    public static YamlFileStore<T> Create(IWebHostEnvironment env, string fileName, IDictionary<string, Type> typeDiscriminators)
+    public static YamlFileStore<T, U> Create(IWebHostEnvironment env, string fileName, IDictionary<string, Type> typeDiscriminators)
     {
         var filePath = Path.Combine(env.WebRootPath, fileName);
 
         if (!File.Exists(filePath))
             File.WriteAllText(filePath, "[]");
 
-        return new YamlFileStore<T>(filePath, typeDiscriminators);
+        return new YamlFileStore<T, U>(filePath, typeDiscriminators);
     }
 
     public async Task<U> QueryAsync<U>(Func<List<T>, U> query)
@@ -90,11 +93,13 @@ public class YamlFileStore<T> : IFileStore<T> where T : FileEntity
 
 public static class YamlFileStoreExtensions
 {
-    public static void AddYamlFileStore<T>(
+    public static void AddYamlFileStore<T, U>(
         this IServiceCollection services,
         IWebHostEnvironment env,
-        string fileName, IDictionary<string, Type> typeDiscriminators) where T : FileEntity
+        string fileName, IDictionary<string, Type> typeDiscriminators)
+        where T : FileEntity
+        where U : IStep
     {
-        services.AddScoped<IFileStore<T>>(_ => YamlFileStore<T>.Create(env, fileName, typeDiscriminators));
+        services.AddScoped<IFileStore<T>>(_ => YamlFileStore<T, U>.Create(env, fileName, typeDiscriminators));
     }
 }
