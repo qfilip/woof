@@ -3,18 +3,18 @@ using Woof.Api.Services.Abstractions;
 
 namespace Woof.Api.Services.Runners;
 
-public class LoopStepRunner : IStepRunner<LoopRunStepParameters>
+public class LoopStepRunner : IStepRunner<LoopRunStep>
 {
-    public async Task<string> RunStepAsync(WorkflowRunStep step, LoopRunStepParameters parameters)
+    public async Task<string> RunStepAsync(LoopRunStep step)
     {
-        if (parameters.CurrentLoopCount == parameters.LoopCount)
+        if (step.Parameters.CurrentLoopCount == step.Parameters.LoopCount)
         {
             step.State.Completed = true;
             return string.Empty;
         }
 
         var stdErr = await IRunner.RunUnitAsync(step.ExecutablePath, step.Arguments);
-        parameters.CurrentLoopCount++;
+        step.Parameters.CurrentLoopCount++;
 
         return stdErr;
     }

@@ -24,8 +24,11 @@ public static class ServiceRegistry
         builder.Services.AddHostedService<ChannelHostingService>();
 
         // file stores
-        builder.Services.AddYamlFileStore<Workflow>(builder.Environment, "workflows.yaml");
-        builder.Services.AddYamlFileStore<WorkflowRun>(builder.Environment, "workflow_runs.yaml");
+        var workflowStepsDiscriminators = GetSteps<Workflow>();
+        var workflowRunStepsDiscriminators = GetSteps<WorkflowRun>();
+
+        builder.Services.AddYamlFileStore<Workflow>(builder.Environment, "workflows.yaml", workflowStepsDiscriminators);
+        builder.Services.AddYamlFileStore<WorkflowRun>(builder.Environment, "workflow_runs.yaml", workflowRunStepsDiscriminators);
 
         // services
         builder.Services.AddScoped<WorkflowBuilderService>();
@@ -35,7 +38,20 @@ public static class ServiceRegistry
         // runners
         builder.Services.AddScoped<IRunner, Runner>();
         
-        builder.Services.AddScoped<IStepRunner<LoopRunStepParameters>, LoopStepRunner>();
-        builder.Services.AddScoped<IStepRunner<SequentialRunStepParameters>, SequentialStepRunner>();
+        builder.Services.AddScoped<IStepRunner<LoopRunStep>, LoopStepRunner>();
+        builder.Services.AddScoped<IStepRunner<SequentialRunStep>, SequentialStepRunner>();
+    }
+
+    private static Dictionary<string, Type> GetSteps<T>() where T : FileEntity
+    {
+        var baseType = typeof(T);
+        
+        return baseType
+            .Assembly
+            .GetTypes()
+            .Where(t =>
+                t != baseType &&
+                baseType.IsAssignableFrom(t))
+            .ToDictionary(x => x.Name.ToLower(), x => x);
     }
 }

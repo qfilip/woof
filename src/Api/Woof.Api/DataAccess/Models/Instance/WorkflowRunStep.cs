@@ -1,5 +1,9 @@
-﻿namespace Woof.Api.DataAccess.Models.Instance;
+﻿using System.Text.Json.Serialization;
 
+namespace Woof.Api.DataAccess.Models.Instance;
+
+[JsonDerivedType(typeof(SequentialRunStep), typeDiscriminator: "sequentialRunStep")]
+[JsonDerivedType(typeof(LoopRunStep), typeDiscriminator: "loopRunStep")]
 public class WorkflowRunStep
 {
     public Guid Id { get; set; }
@@ -7,7 +11,5 @@ public class WorkflowRunStep
     public required string ExecutablePath { get; set; }
     public string? Arguments { get; set; }
     public StepState State { get; set; } = new();
-    public LoopRunStepParameters? LoopParameters { get; set; }
-    public SequentialRunStepParameters? SequentialParameters { get; set; }
     public WorkflowRunStep? Next { get; set; }
 }

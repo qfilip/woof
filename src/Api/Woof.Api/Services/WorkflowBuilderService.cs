@@ -30,19 +30,8 @@ public class WorkflowBuilderService
         return wf;
     }
 
-    public async Task<Opcode<Workflow>> AddNextStepAsync(AddNextStepDto dto)
+    public async Task<Opcode<Workflow>> AddNextStepAsync<T>(AddNextStepDto<T> dto) where T : WorkflowStep
     {
-        var definedParametersCount = 0;
-
-        if (dto.Step.LoopParameters != null) definedParametersCount++;
-        if (dto.Step.SequentialParameters != null) definedParametersCount++;
-        
-        if (definedParametersCount == 0)
-            return Opcode<Workflow>.Rejected("No defined parameters");
-
-        if (definedParametersCount > 1)
-            return Opcode<Workflow>.Rejected("More than one parameter defined");
-
         var wf = await _fs.QueryAsync(xs => xs.FirstOrDefault(x => x.Id == dto.WorkflowId));
         if (wf == null) return Opcode<Workflow>.NotFound("Workflow not found.");
 
@@ -50,24 +39,21 @@ public class WorkflowBuilderService
         if (!hasExecutable)
             return Opcode<Workflow>.NotFound(pathOrError);
 
-        var nextStep = new WorkflowStep
+        dto.Step.Id = Guid.NewGuid();
+
+        var seq = dto.Step as SequentialStep;
+        if (dto.ParentStepId == null && seq == null)
+            return Opcode<Workflow>.Rejected("InitStep must be sequential.");
+
+        if(dto.ParentStepId == null && seq != null)
         {
-            Id = Guid.NewGuid(),
-            Name = dto.Step.Name,
-            Arguments = dto.Step.Arguments,
-            ExecutableName = dto.Step.ExecutableName,
-            LoopParameters = dto.Step.LoopParameters,
-            SequentialParameters = dto.Step.SequentialParameters
-        };
-        
-        if (dto.ParentStepId == null)
-        {
-            wf.InitStep = nextStep;
+            wf.InitStep = seq;
             await _fs.UpdateAsync(wf);
+            
             return Opcode<Workflow>.Ok(wf);
         }
 
-        var stepAdded = AddNextStep(wf.InitStep, dto.ParentStepId!.Value, nextStep);
+        var stepAdded = AddNextStep(wf.InitStep, dto.ParentStepId!.Value, dto.Step);
         
         if(stepAdded)
             await _fs.UpdateAsync(wf);

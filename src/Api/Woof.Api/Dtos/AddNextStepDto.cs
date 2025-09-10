@@ -2,8 +2,8 @@
 
 namespace Woof.Api.Dtos;
 
-public record AddNextStepDto(
+public record AddNextStepDto<T>(
     Guid WorkflowId,
     Guid? ParentStepId,
-    WorkflowStep Step
-);
+    T Step
+) where T : WorkflowStep;

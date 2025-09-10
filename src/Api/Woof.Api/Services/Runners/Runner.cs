@@ -6,12 +6,12 @@ namespace Woof.Api.Services.Runners;
 
 public class Runner : IRunner
 {
-    private readonly IStepRunner<LoopRunStepParameters> _loopRunner;
-    private readonly IStepRunner<SequentialRunStepParameters> _sequentialRunner;
+    private readonly IStepRunner<LoopRunStep> _loopRunner;
+    private readonly IStepRunner<SequentialRunStep> _sequentialRunner;
 
     public Runner(
-        IStepRunner<LoopRunStepParameters> loopRunner,
-        IStepRunner<SequentialRunStepParameters> sequentialRunner)
+        IStepRunner<LoopRunStep> loopRunner,
+        IStepRunner<SequentialRunStep> sequentialRunner)
     {
         _loopRunner = loopRunner;
         _sequentialRunner = sequentialRunner;
@@ -20,8 +20,8 @@ public class Runner : IRunner
     {
         var runTask = step switch
         {
-            { LoopParameters: not null } => _loopRunner.RunStepAsync(step, step.LoopParameters),
-            { SequentialParameters: not null } => _sequentialRunner.RunStepAsync(step, step.SequentialParameters),
+            LoopRunStep loop => _loopRunner.RunStepAsync(loop),
+            SequentialRunStep seq => _sequentialRunner.RunStepAsync(seq),
             _ => throw new UnreachableException($"Step parameters not found for {step.Id}")
         };
 

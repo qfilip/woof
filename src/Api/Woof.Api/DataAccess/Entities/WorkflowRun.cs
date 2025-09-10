@@ -3,6 +3,7 @@ using Woof.Api.Enums;
 
 namespace Woof.Api.DataAccess.Entities;
 
+
 public class WorkflowRun : FileEntity
 {
     public Guid WorkflowId { get; set; }

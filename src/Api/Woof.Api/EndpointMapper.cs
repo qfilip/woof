@@ -30,7 +30,13 @@ public static class EndpointMapper
             return Results.Ok(result);
         });
 
-        group.MapPost("add_next_step", async (AddNextStepDto dto, WorkflowBuilderService wfs) =>
+        group.MapPost("add_sequential", async (AddNextStepDto<SequentialStep> dto, WorkflowBuilderService wfs) =>
+        {
+            var result = await wfs.AddNextStepAsync(dto);
+            return result.ToResult();
+        });
+
+        group.MapPost("add_loop", async (AddNextStepDto<LoopStep> dto, WorkflowBuilderService wfs) =>
         {
             var result = await wfs.AddNextStepAsync(dto);
             return result.ToResult();

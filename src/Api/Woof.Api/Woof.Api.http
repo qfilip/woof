@@ -12,7 +12,7 @@ Content-Type: application/json
 
 ###
 
-Post {{Woof.api}}/definitions/add_next_step
+Post {{Woof.api}}/definitions/add_next_sequential
 Content-Type: application/json
 
 {
@@ -28,7 +28,7 @@ Content-Type: application/json
 
 ###
 
-Post {{Woof.api}}/definitions/add_next_step
+Post {{Woof.api}}/definitions/add_next_loop
 Content-Type: application/json
 
 {

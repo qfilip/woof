@@ -1,4 +1,5 @@
-﻿using System.Threading.Channels;
+﻿using System.Diagnostics;
+using System.Threading.Channels;
 using Woof.Api.DataAccess;
 using Woof.Api.DataAccess.Entities;
 using Woof.Api.DataAccess.Models.Definition;
@@ -114,19 +115,7 @@ public class WorkflowExecutionService
             if (!ok)
                 errors.Add($"{pathOrError} at step {step.Id}.");
 
-            var runStep = new WorkflowRunStep
-            {
-                Id = step.Id,
-                Name = step.Name,
-                Arguments = step.Arguments,
-                ExecutablePath = pathOrError,
-                State = new(),
-                LoopParameters = step.LoopParameters == null ? null : new LoopRunStepParameters
-                {
-                    LoopCount = step.LoopParameters.LoopCount
-                },
-                SequentialParameters = step.SequentialParameters == null ? null : new()
-            };
+            var runStep = MapRunStep(step, pathOrError);
 
             runStep.Next = MapSubsteps(step.Next);
 
@@ -136,9 +125,7 @@ public class WorkflowExecutionService
         var initRunStep = MapSubsteps(wf.InitStep);
         
         if(errors.Any())
-        {
             return Opcode<WorkflowRun>.Rejected(errors);
-        }
 
         var wfr = new WorkflowRun
         {
@@ -152,6 +139,7 @@ public class WorkflowExecutionService
 
         return Opcode<WorkflowRun>.Ok(wfr);
     }
+
     private WorkflowStep? FindStep(Workflow wf, Func<WorkflowStep, bool> predicate)
     {
         WorkflowStep? currentStep = wf.InitStep;
@@ -165,6 +153,7 @@ public class WorkflowExecutionService
 
         return null;
     }
+
     private WorkflowRunStep? FindRunStep(WorkflowRun wfr, Func<WorkflowRunStep, bool> predicate)
     {
         WorkflowRunStep? currentStep = wfr.InitStep;
@@ -178,5 +167,29 @@ public class WorkflowExecutionService
         }
 
         return null;
+    }
+
+    private WorkflowRunStep MapRunStep<T>(T step, string executablePath) where T : WorkflowStep
+    {
+        WorkflowRunStep runStep = step switch
+        {
+            SequentialStep seq => new SequentialRunStep() { ExecutablePath = executablePath },
+            LoopStep loop => new LoopRunStep()
+            {
+                ExecutablePath = executablePath,
+                Parameters = new LoopRunStepParameters()
+                {
+                    LoopCount = loop.Parameters.LoopCount
+                }
+            },
+            _ => throw new InvalidOperationException($"Runstep cannot be of type {step.GetType()}")
+        };
+
+        runStep.Id = step.Id;
+        runStep.Name = step.Name;
+        runStep.State = new();
+        runStep.Arguments = step.Arguments;
+
+        return runStep;
     }
 }
