@@ -7,6 +7,7 @@ namespace Woof.Api.DataAccess.Models.Instance;
 public class WorkflowRunStep : IStep
 {
     public Guid Id { get; set; }
+    public string? Type { get; set; }
     public string? Name { get; set; }
     public required string ExecutablePath { get; set; }
     public string? Arguments { get; set; }

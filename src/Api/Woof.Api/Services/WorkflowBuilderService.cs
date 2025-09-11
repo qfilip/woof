@@ -1,5 +1,6 @@
 ﻿using Woof.Api.DataAccess;
 using Woof.Api.DataAccess.Entities;
+using Woof.Api.DataAccess.Models;
 using Woof.Api.DataAccess.Models.Definition;
 using Woof.Api.Dtos;
 
@@ -32,6 +33,8 @@ public class WorkflowBuilderService
 
     public async Task<Opcode<Workflow>> AddNextStepAsync<T>(AddNextStepDto<T> dto) where T : WorkflowStep
     {
+        if(dto.Step == null) return Opcode<Workflow>.Rejected("Step cannot be null.");
+
         var wf = await _fs.QueryAsync(xs => xs.FirstOrDefault(x => x.Id == dto.WorkflowId));
         if (wf == null) return Opcode<Workflow>.NotFound("Workflow not found.");
 
@@ -40,14 +43,11 @@ public class WorkflowBuilderService
             return Opcode<Workflow>.NotFound(pathOrError);
 
         dto.Step.Id = Guid.NewGuid();
-
-        var seq = dto.Step as SequentialStep;
-        if (dto.ParentStepId == null && seq == null)
-            return Opcode<Workflow>.Rejected("InitStep must be sequential.");
-
-        if(dto.ParentStepId == null && seq != null)
+        IStep.SetType(dto.Step);
+        
+        if(dto.ParentStepId == null)
         {
-            wf.InitStep = seq;
+            wf.InitStep = dto.Step;
             await _fs.UpdateAsync(wf);
             
             return Opcode<Workflow>.Ok(wf);
@@ -86,6 +86,7 @@ public class WorkflowBuilderService
         }
         else if(step.Id == parentStepId)
         {
+            IStep.SetType(nextStep);
             step.Next = nextStep;
             return true;
         }

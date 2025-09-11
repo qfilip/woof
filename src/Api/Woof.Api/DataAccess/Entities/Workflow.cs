@@ -5,5 +5,5 @@ namespace Woof.Api.DataAccess.Entities;
 public class Workflow : FileEntity
 {
     public string? Name { get; set; }
-    public SequentialStep? InitStep { get; set; }
+    public WorkflowStep? InitStep { get; set; }
 }
