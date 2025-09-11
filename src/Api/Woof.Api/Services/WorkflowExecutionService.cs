@@ -1,6 +1,7 @@
 ﻿using System.Threading.Channels;
 using Woof.Api.DataAccess;
 using Woof.Api.DataAccess.Entities;
+using Woof.Api.DataAccess.Models;
 using Woof.Api.DataAccess.Models.Definition;
 using Woof.Api.DataAccess.Models.Instance;
 using Woof.Api.Enums;
@@ -172,9 +173,14 @@ public class WorkflowExecutionService
     {
         WorkflowRunStep runStep = step switch
         {
-            SequentialStep seq => new SequentialRunStep() { ExecutablePath = executablePath },
+            SequentialStep seq => new SequentialRunStep()
+            {
+                Type = IStep.GetType<SequentialRunStep>(),
+                ExecutablePath = executablePath
+            },
             LoopStep loop => new LoopRunStep()
             {
+                Type = IStep.GetType<LoopRunStep>(),
                 ExecutablePath = executablePath,
                 Parameters = new LoopRunStepParameters()
                 {
