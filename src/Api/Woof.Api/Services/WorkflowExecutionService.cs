@@ -1,7 +1,6 @@
 ﻿using System.Threading.Channels;
 using Woof.Api.DataAccess;
 using Woof.Api.DataAccess.Entities;
-using Woof.Api.DataAccess.Models;
 using Woof.Api.DataAccess.Models.Definition;
 using Woof.Api.DataAccess.Models.Instance;
 using Woof.Api.Enums;
@@ -173,27 +172,16 @@ public class WorkflowExecutionService
     {
         WorkflowRunStep runStep = step switch
         {
-            SequentialStep seq => new SequentialRunStep()
+            SequentialStep seq => seq.MapTo<SequentialRunStep, SequentialStep>(executablePath),
+            LoopStep loop => loop.MapTo<LoopRunStep, LoopStep>(executablePath, x =>
             {
-                Type = IStep.GetType<SequentialRunStep>(),
-                ExecutablePath = executablePath
-            },
-            LoopStep loop => new LoopRunStep()
-            {
-                Type = IStep.GetType<LoopRunStep>(),
-                ExecutablePath = executablePath,
-                Parameters = new LoopRunStepParameters()
+                x.Parameters = new LoopRunStepParameters()
                 {
                     LoopCount = loop.Parameters.LoopCount
-                }
-            },
-            _ => throw new InvalidOperationException($"Runstep cannot be of type {step.GetType()}")
+                };
+            }),
+            _ => throw new InvalidOperationException($"Runstep cannot be of type {step.GetType().Name}")
         };
-
-        runStep.Id = step.Id;
-        runStep.Name = step.Name;
-        runStep.State = new();
-        runStep.Arguments = step.Arguments;
 
         return runStep;
     }

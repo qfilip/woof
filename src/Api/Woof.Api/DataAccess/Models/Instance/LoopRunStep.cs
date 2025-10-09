@@ -2,7 +2,7 @@
 
 public class LoopRunStep : WorkflowRunStep
 {
-    public required LoopRunStepParameters Parameters { get; set; }
+    public LoopRunStepParameters Parameters { get; set; } = new();
 }
 
 public class LoopRunStepParameters : IRunStepParameter

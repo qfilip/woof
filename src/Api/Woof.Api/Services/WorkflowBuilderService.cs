@@ -31,7 +31,7 @@ public class WorkflowBuilderService
         return wf;
     }
 
-    public async Task<Opcode<Workflow>> AddNextStepAsync<T>(AddNextStepDto<T> dto) where T : WorkflowStep
+    public async Task<Opcode<Workflow>> AddNextStepAsync<T>(AddNextStepDto<T> dto) where T : WorkflowStep, new()
     {
         if(dto.Step == null) return Opcode<Workflow>.Rejected("Step cannot be null.");
 
@@ -43,17 +43,17 @@ public class WorkflowBuilderService
             return Opcode<Workflow>.NotFound(pathOrError);
 
         dto.Step.Id = Guid.NewGuid();
-        IStep.SetType(dto.Step);
-        
+        var step = dto.Step.MapTo<T>();
+        // pattern match to map parameters
         if(dto.ParentStepId == null)
         {
-            wf.InitStep = dto.Step;
+            wf.InitStep = step;
             await _fs.UpdateAsync(wf);
             
             return Opcode<Workflow>.Ok(wf);
         }
 
-        var stepAdded = AddNextStep(wf.InitStep, dto.ParentStepId!.Value, dto.Step);
+        var stepAdded = AddNextStep(wf.InitStep, dto.ParentStepId!.Value, step);
         
         if(stepAdded)
             await _fs.UpdateAsync(wf);
@@ -61,6 +61,23 @@ public class WorkflowBuilderService
         return stepAdded ? Opcode<Workflow>.Ok(wf) : Opcode<Workflow>.NotFound("Parent step not found.");
     }
 
+    private static bool AddNextStep<T>(WorkflowStep? step, Guid parentStepId, T nextStep) where T : WorkflowStep
+    {
+        if (step == null)
+        {
+            return false;
+        }
+        else if(step.Id == parentStepId)
+        {
+            step.Next = nextStep;
+            return true;
+        }
+        else
+        {
+            return AddNextStep(step.Next, parentStepId, nextStep);
+        }
+    }
+    
     public async Task<Opcode<Workflow>> RemoveStepAsync(Guid workflowId, Guid stepId)
     {
         var wf = await _fs.QueryAsync(xs => xs.FirstOrDefault(x => x.Id == workflowId));
@@ -76,24 +93,6 @@ public class WorkflowBuilderService
         }
 
         return stepRemoved ? Opcode<Workflow>.Ok(wf) : Opcode<Workflow>.NotFound("Step not found.");
-    }
-
-    private static bool AddNextStep<T>(WorkflowStep? step, Guid parentStepId, T nextStep) where T : WorkflowStep
-    {
-        if (step == null)
-        {
-            return false;
-        }
-        else if(step.Id == parentStepId)
-        {
-            IStep.SetType(nextStep);
-            step.Next = nextStep;
-            return true;
-        }
-        else
-        {
-            return AddNextStep(step.Next, parentStepId, nextStep);
-        }
     }
 
     private static bool RemoveStep(WorkflowStep parentStep, Guid targetStepId)

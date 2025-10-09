@@ -2,7 +2,7 @@
 
 public class LoopStep : WorkflowStep
 {
-    public required LoopStepParameters Parameters { get; set; }
+    public LoopStepParameters Parameters { get; set; } = new();
 }
 
 public class LoopStepParameters

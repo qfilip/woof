@@ -1,0 +1,9 @@
+- name: 
+  initStep:
+    id: 64fee82f-8841-4578-b132-712c318f86ea
+    type: sequentialstep
+    name: mult
+    executableName: Exec.Multiply.exe
+    arguments: 1 2
+    next: 
+  id: de1b1fe4-7b02-4894-ba37-cecccf4d2dba

@@ -9,7 +9,7 @@ public class WorkflowRunStep : IStep
     public Guid Id { get; set; }
     public string? Type { get; set; }
     public string? Name { get; set; }
-    public required string ExecutablePath { get; set; }
+    public string ExecutablePath { get; set; } = string.Empty;
     public string? Arguments { get; set; }
     public StepState State { get; set; } = new();
     public WorkflowRunStep? Next { get; set; }
