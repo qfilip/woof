@@ -79,7 +79,7 @@ public class WorkflowExecutionService
                 currentRunStep.Id);
 
             currentRunStep.State.Completed = true;
-            currentRunStep.State.Status = "Executable file not found";
+            currentRunStep.State.StdErr = "Executable file not found";
             await _runStore.UpdateAsync(wfr);
             return;
         }
