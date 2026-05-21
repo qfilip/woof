@@ -43,7 +43,7 @@ public class WorkflowExecutionService
         if (opcode.Errors.Any()) return opcode;
 
         await _writer.WriteAsync(opcode.Data!);
-
+        
         return opcode;
     }
 
@@ -137,20 +137,6 @@ public class WorkflowExecutionService
         await _runStore.CompleteAsync();
 
         return Opcode<WorkflowRun>.Ok(wfr);
-    }
-
-    private WorkflowStep? FindStep(Workflow wf, Func<WorkflowStep, bool> predicate)
-    {
-        WorkflowStep? currentStep = wf.InitStep;
-        while (currentStep != null)
-        {
-            if (predicate(currentStep))
-                return currentStep;
-            else
-                currentStep = currentStep.Next;
-        }
-
-        return null;
     }
 
     private WorkflowRunStep? FindRunStep(WorkflowRun wfr, Func<WorkflowRunStep, bool> predicate)

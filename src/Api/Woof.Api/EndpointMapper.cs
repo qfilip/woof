@@ -32,14 +32,14 @@ public static class EndpointMapper
 
         group.MapPost("add_sequential", async (AddNextStepDto<SequentialStep> dto, WorkflowBuilderService wfs) =>
         {
-            var result = await wfs.AddNextStepAsync(dto);
-            return result.ToResult();
+            var opcode = await wfs.AddNextStepAsync(dto);
+            return opcode.ToResult();
         });
 
         group.MapPost("add_loop", async (AddNextStepDto<LoopStep> dto, WorkflowBuilderService wfs) =>
         {
-            var result = await wfs.AddNextStepAsync(dto);
-            return result.ToResult();
+            var opcode = await wfs.AddNextStepAsync(dto);
+            return opcode.ToResult();
         });
     }
 
@@ -49,8 +49,8 @@ public static class EndpointMapper
 
         group.MapPost("", async (RunWorkflowDto dto, WorkflowExecutionService wes) =>
         {
-            var result = await wes.StartWorkflowAsync(dto.WorkflowId);
-            return result.ToResult();
+            var opcode = await wes.StartWorkflowAsync(dto.WorkflowId);
+            return opcode.ToResult(202);
         });
     }
 }
