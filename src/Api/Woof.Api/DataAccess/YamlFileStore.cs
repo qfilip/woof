@@ -41,7 +41,7 @@ public class YamlFileStore<T, U> : IFileStore<T>
         return new YamlFileStore<T, U>(filePath, typeDiscriminators);
     }
 
-    public async Task<U> QueryAsync<U>(Func<List<T>, U> query)
+    public async Task<TResult> QueryAsync<TResult>(Func<List<T>, TResult> query)
     {
         await Gate.WaitAsync();
         var text = await File.ReadAllTextAsync(_filePath);
